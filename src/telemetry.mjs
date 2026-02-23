@@ -169,8 +169,7 @@ export async function runTelemetry(api) {
     spikes: state.spikes[todayStr] || [],
     now
   }, {
-    // Variety often needs the direct filename in the URL to believe it's an image
-    chartUrlBase: `http://localhost:18789/api/telemetry/${latestPngName}`
+    filename: latestPngName
   });
   await fs.writeFile(rssPath, rss);
 
