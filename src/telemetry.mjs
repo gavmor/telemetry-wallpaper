@@ -1,10 +1,26 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
+import { spawn } from 'node:child_process';
 
-const execAsync = promisify(exec);
+/**
+ * Promisified spawn for secure execution without shell interpolation.
+ */
+function spawnAsync(command, args) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(command, args);
+    let stderr = '';
+    proc.stderr.on('data', (data) => { stderr += data; });
+    proc.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`Command ${command} failed with code ${code}: ${stderr}`));
+    });
+  });
+}
 
+/**
+ * Core telemetry processing and SVG generation migrated from Python.
+ * Final Hardened Version.
+ */
 export async function runTelemetry(api) {
   // 1. Robust Path Resolution
   const HOME_DIR = process.env.HOME || '/home/user';
@@ -88,10 +104,7 @@ export async function runTelemetry(api) {
         if (entry.type === 'message' && entry.message) {
           const msg = entry.message;
           if (msg.usage) {
-            // FIX: Use proper local date formatting instead of ISO split (which is always UTC)
             const dt = new Date(entry.timestamp);
-            
-            // Generate local-aware keys
             const pad = (n) => String(n).padStart(2, '0');
             const dayStr = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
             const minute = Math.floor(dt.getMinutes() / 15) * 15;
@@ -157,7 +170,6 @@ export async function runTelemetry(api) {
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  
   const todayDt = new Date(now);
   todayDt.setHours(0, 0, 0, 0);
   
@@ -222,8 +234,8 @@ export async function runTelemetry(api) {
   let svg = `<svg width="${resW}" height="${resH}" xmlns="http://www.w3.org/2000/svg">`;
   svg += `<rect width="100%" height="100%" fill="${BG}" />`;
   const dateOptions = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
-  const title = `Token Usage: ${now.toLocaleDateString('en-US', dateOptions)}`;
-  svg += `<text x="${marginL + chartW/2}" y="60" font-family="monospace" font-size="32" font-weight="bold" text-anchor="middle" fill="${FG}">${title}</text>`;
+  const titleText = `Token Usage: ${now.toLocaleDateString('en-US', dateOptions)}`;
+  svg += `<text x="${marginL + chartW/2}" y="60" font-family="monospace" font-size="32" font-weight="bold" text-anchor="middle" fill="${FG}">${titleText}</text>`;
 
   for (const tick of [0, adjMax / 2, adjMax]) {
     const y = scaleY(tick);
@@ -274,8 +286,9 @@ export async function runTelemetry(api) {
   const svgPath = path.join(OPENCLAW_DIR, 'hourly_model_usage.svg');
   await fs.writeFile(svgPath, svg);
 
+  // Securely set wallpaper using spawn without shell
   try {
-    await execAsync(`/usr/bin/gsettings set org.cinnamon.desktop.background picture-uri "file://${svgPath}"`);
-    await execAsync(`/usr/bin/gsettings set org.cinnamon.desktop.background picture-options "scaled"`);
+    await spawnAsync('/usr/bin/gsettings', ['set', 'org.cinnamon.desktop.background', 'picture-uri', `file://${svgPath}`]);
+    await spawnAsync('/usr/bin/gsettings', ['set', 'org.cinnamon.desktop.background', 'picture-options', 'scaled']);
   } catch (_err) {}
 }
