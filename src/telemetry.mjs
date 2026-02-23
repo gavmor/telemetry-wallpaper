@@ -3,6 +3,16 @@ import path from 'node:path';
 import { renderUsageSVG } from './renderer.mjs';
 import { renderTelemetryRSS } from './rss.mjs';
 
+// Conditional import for canvas
+let createCanvas, loadImage;
+try {
+  const canvas = await import('@napi-rs/canvas');
+  createCanvas = canvas.createCanvas;
+  loadImage = canvas.loadImage;
+} catch (e) {
+  console.warn('telemetry-collector: @napi-rs/canvas not found, PNG rendering disabled');
+}
+
 /**
  * Data Collector & Orchestrator.
  */
@@ -80,7 +90,6 @@ export async function runTelemetry(api) {
           
           state.daily_stats[dStr][intervalStr][fullId].active += active;
           state.daily_stats[dStr][intervalStr][fullId].cache += cache;
-          console.log(`telemetry-collector: recorded ${active} tokens for ${fullId} at ${intervalStr}`);
           updatedDays.add(dStr);
 
           if (total > SPIKE_THRESHOLD) {
@@ -116,6 +125,26 @@ export async function runTelemetry(api) {
 
   const svgPath = path.join(OPENCLAW_DIR, 'usage_telemetry.svg');
   await fs.writeFile(svgPath, svg);
+
+  // Variety fix: Render to PNG if possible
+  if (createCanvas) {
+    try {
+      const [w, h] = (pluginCfg.resolution || '1920x1080').split('x').map(Number);
+      const canvas = createCanvas(w, h);
+      const ctx = canvas.getContext('2d');
+      const img = await loadImage(Buffer.from(svg));
+      ctx.drawImage(img, 0, 0, w, h);
+      const pngPath = path.join(OPENCLAW_DIR, 'usage_telemetry.png');
+      await fs.writeFile(pngPath, canvas.toBuffer('image/png'));
+      
+      // Mirror to wallpaper dir
+      const wallDir = path.join(OPENCLAW_DIR, 'wallpaper');
+      await fs.mkdir(wallDir, { recursive: true });
+      await fs.writeFile(path.join(wallDir, 'chart.png'), canvas.toBuffer('image/png'));
+    } catch (e) {
+      console.error('telemetry-collector: PNG rendering failed', e);
+    }
+  }
   
   // Variety-compatible Media RSS Feed
   const rssPath = path.join(OPENCLAW_DIR, 'telemetry_feed.xml');
@@ -137,8 +166,6 @@ export async function runTelemetry(api) {
 export async function handleTelemetryHttpRequest(req, res) {
   const HOME_DIR = process.env.HOME || '/home/user';
   const OPENCLAW_DIR = path.join(HOME_DIR, '.openclaw');
-
-  console.log(`telemetry-collector: HTTP request ${req.method} ${req.url}`);
 
   if (req.method === 'GET') {
     if (req.url.includes('/api/telemetry/chart.svg')) {
