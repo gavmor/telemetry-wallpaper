@@ -161,6 +161,12 @@ export async function runTelemetry(api, options = {}) {
     try {
       const canvas = createCanvas(w, h);
       const ctx = canvas.getContext('2d');
+      
+      // Draw proof text directly on canvas to verify GlobalFonts works
+      ctx.font = '30px "JetBrains Mono"';
+      ctx.fillStyle = '#ebdbb2';
+      ctx.fillText('Canvas Font Proof: JetBrains Mono', 150, 150);
+
       const img = await loadImage(Buffer.from(svg));
       ctx.drawImage(img, 0, 0, w, h);
       

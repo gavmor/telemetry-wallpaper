@@ -100,7 +100,7 @@ export function renderUsageSVG(data, options = {}) {
   const scaleX = (i) => marginL + (i / 95) * chartW;
   const scaleY = (v) => resH - marginB - (v / adjMax) * chartH;
 
-  const FONT = "'JetBrains Mono', monospace";
+  const FONT = "monospace";
 
   // 6. Build SVG
   let svg = `<svg width="${resW}" height="${resH}" xmlns="http://www.w3.org/2000/svg">`;
