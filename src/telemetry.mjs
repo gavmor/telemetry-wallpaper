@@ -79,6 +79,7 @@ export async function runTelemetry(api) {
           
           state.daily_stats[dStr][intervalStr][fullId].active += active;
           state.daily_stats[dStr][intervalStr][fullId].cache += cache;
+          console.log(`telemetry-collector: recorded ${active} tokens for ${fullId} at ${intervalStr}`);
           updatedDays.add(dStr);
 
           if (total > SPIKE_THRESHOLD) {

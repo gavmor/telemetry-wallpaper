@@ -129,7 +129,8 @@ export function renderUsageSVG(data, options = {}) {
   for (let i = 0; i < 96; i += 8) {
     const lbl = fixedIntervals[i].split(' ')[1];
     const x = scaleX(i);
-    svg += `<text x="${x}" y="${resH - marginB + 30}" font-family="monospace" font-size="12" text-anchor="middle" transform="rotate(35, {x}, {resH - marginB + 30})" fill="${GRAY}">${lbl}</text>`;
+    const y = resH - marginB + 30;
+    svg += `<text x="${x}" y="${y}" font-family="monospace" font-size="12" text-anchor="middle" transform="rotate(35, ${x}, ${y})" fill="${GRAY}">${lbl}</text>`;
   }
 
   svg += `</svg>`;
