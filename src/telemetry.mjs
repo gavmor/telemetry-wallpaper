@@ -8,11 +8,26 @@ import { renderTelemetryRSS } from './rss.mjs';
  */
 export async function runTelemetry(api) {
   // Conditional import for canvas
-  let createCanvas, loadImage;
+  let createCanvas, loadImage, GlobalFonts;
   try {
     const canvas = await import('@napi-rs/canvas');
     createCanvas = canvas.createCanvas;
     loadImage = canvas.loadImage;
+    GlobalFonts = canvas.GlobalFonts;
+
+    // Register standard Linux fonts to avoid "tofu" (white rectangles)
+    const fontPaths = [
+      '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
+      '/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf',
+      '/usr/share/fonts/truetype/noto/NotoSansMono-Regular.ttf'
+    ];
+    for (const f of fontPaths) {
+      try {
+        await fs.access(f);
+        GlobalFonts.registerFromPath(f, 'monospace');
+        break;
+      } catch (e) {}
+    }
   } catch (e) {
     console.warn('telemetry-collector: @napi-rs/canvas not found, PNG rendering disabled');
   }
@@ -129,10 +144,11 @@ export async function runTelemetry(api) {
   const timestamp = Math.floor(now.getTime() / 1000);
   let latestPngName = 'usage_telemetry.png';
 
+  const [w, h] = (pluginCfg.resolution || '1920x1080').split('x').map(Number);
+
   // Variety fix: Render to PNG with unique filename
   if (createCanvas) {
     try {
-      const [w, h] = (pluginCfg.resolution || '1920x1080').split('x').map(Number);
       const canvas = createCanvas(w, h);
       const ctx = canvas.getContext('2d');
       const img = await loadImage(Buffer.from(svg));
@@ -162,8 +178,6 @@ export async function runTelemetry(api) {
     }
   }
   
-  const [w, h] = (pluginCfg.resolution || '1920x1080').split('x').map(Number);
-
   // Variety-compatible Media RSS Feed
   const rssPath = path.join(OPENCLAW_DIR, 'telemetry_feed.xml');
   const rss = renderTelemetryRSS({
