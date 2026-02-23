@@ -26,7 +26,7 @@ describe('RSS Feed Generation', () => {
     
     expect(rss).toContain('<title>Latest Telemetry Chart</title>');
     expect(rss).toContain('<guid>chart-2026-02-22-'); // Part of guid should match
-    expect(rss).toContain('/api/telemetry/chart.svg?t=1771761600000');
+    expect(rss).toContain('/api/telemetry/chart.png?t=1771761600000');
   });
 
   it('should include spike items', () => {
@@ -35,14 +35,14 @@ describe('RSS Feed Generation', () => {
     expect(rss).toContain('<title>Usage Spike: 75,000 tokens</title>');
     expect(rss).toContain('<description>Model: openai/gpt-4o | Channel: matrix/Gavin</description>');
     expect(rss).toContain('<pubDate>Sun, 22 Feb 2026 11:00:00 GMT</pubDate>');
-    expect(rss).toContain('type="image/svg+xml"');
-    expect(rss).toContain('/api/telemetry/chart.svg?t=1771761600000');
+    expect(rss).toContain('type="image/png"');
+    expect(rss).toContain('/api/telemetry/chart.png?t=1771761600000');
   });
 
   it('should respect custom chartUrlBase', () => {
-    const rss = renderTelemetryRSS({ todayStr, spikes, now }, { chartUrlBase: 'https://example.com/chart.svg' });
+    const rss = renderTelemetryRSS({ todayStr, spikes, now }, { chartUrlBase: 'https://example.com/chart.png' });
     
-    expect(rss).toContain('https://example.com/chart.svg?t=1771761600000');
+    expect(rss).toContain('https://example.com/chart.png?t=1771761600000');
   });
 
   it('should handle empty spikes', () => {

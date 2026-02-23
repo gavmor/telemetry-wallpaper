@@ -180,6 +180,18 @@ export async function handleTelemetryHttpRequest(req, res) {
         res.statusCode = 404; res.end('SVG not found'); return true;
       }
     }
+    if (req.url.includes('/api/telemetry/chart.png')) {
+      try {
+        const content = await fs.readFile(path.join(OPENCLAW_DIR, 'usage_telemetry.png'));
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.end(content);
+        return true;
+      } catch (e) {
+        res.statusCode = 404; res.end('PNG not found'); return true;
+      }
+    }
     if (req.url.includes('/api/telemetry/feed.xml')) {
       try {
         const content = await fs.readFile(path.join(OPENCLAW_DIR, 'telemetry_feed.xml'));
