@@ -6,7 +6,6 @@ import { renderUsageSVG } from './renderer.mjs';
  * Data Collector & Orchestrator.
  */
 export async function runTelemetry(api) {
-  // 1. Path Resolution
   const HOME_DIR = process.env.HOME || '/home/user';
   let OPENCLAW_DIR = path.join(HOME_DIR, '.openclaw');
   if (typeof api.getPaths === 'function') OPENCLAW_DIR = api.getPaths().stateDir;
@@ -21,7 +20,6 @@ export async function runTelemetry(api) {
   
   await fs.mkdir(HISTORY_DIR, { recursive: true });
 
-  // 2. Load Metadata & State
   let sessionMetadata = {};
   try {
     const raw = JSON.parse(await fs.readFile(SESSIONS_CONFIG, 'utf8'));
@@ -36,7 +34,6 @@ export async function runTelemetry(api) {
   let state = { cursors: {}, daily_stats: {}, spikes: {} };
   try { state = JSON.parse(await fs.readFile(STATE_PATH, 'utf8')); } catch (e) {}
 
-  // 3. Incremental Log Processing
   let files = [];
   try { files = (await fs.readdir(SESSIONS_DIR)).filter(f => f.endsWith('.jsonl')); } catch (e) {}
   
@@ -118,32 +115,72 @@ export async function runTelemetry(api) {
   const svgPath = path.join(OPENCLAW_DIR, 'usage_telemetry.svg');
   await fs.writeFile(svgPath, svg);
   
+  // Generate RSS Feed
+  const rssPath = path.join(OPENCLAW_DIR, 'telemetry_feed.xml');
+  const rssItems = (state.spikes[todayStr] || []).slice(-10).reverse().map(s => `
+    <item>
+      <title>Usage Spike: ${s.tokens.toLocaleString()} tokens</title>
+      <description>Model: ${s.model} | Channel: ${s.channel} | Time: ${s.interval}</description>
+      <pubDate>${new Date(s.timestamp).toUTCString()}</pubDate>
+      <link>http://localhost:18789/api/telemetry/chart.svg</link>
+      <guid>${s.timestamp}-${s.tokens}</guid>
+    </item>`).join('');
+
+  const rss = `<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+<channel>
+  <title>OpenClaw Telemetry</title>
+  <description>Real-time token usage and spikes</description>
+  <link>http://localhost:18789</link>
+  <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+  <item>
+    <title>Latest Telemetry Chart</title>
+    <description>The current usage visualization SVG</description>
+    <pubDate>${new Date().toUTCString()}</pubDate>
+    <link>http://localhost:18789/api/telemetry/chart.svg</link>
+    <guid>chart-${todayStr}-${Math.floor(Date.now() / (15 * 60 * 1000))}</guid>
+  </item>${rssItems}
+</channel>
+</rss>`;
+  await fs.writeFile(rssPath, rss);
+
   if (typeof api.emit === 'function') {
-    api.emit('telemetry:updated', { path: svgPath });
+    api.emit('telemetry:updated', { path: svgPath, rssPath });
   }
-  console.log(`telemetry-collector: generated ${svgPath}`);
+  console.log(`telemetry-collector: generated ${svgPath} and ${rssPath}`);
 }
 
 /**
- * Handles HTTP requests to serve the telemetry SVG.
+ * Handles HTTP requests to serve the telemetry SVG and RSS feed.
  */
 export async function handleTelemetryHttpRequest(req, res) {
-  // Simple routing for the SVG endpoint
-  if (req.method === 'GET' && req.url.includes('/api/telemetry/chart.svg')) {
-    try {
-      const HOME_DIR = process.env.HOME || '/home/user';
-      const svgPath = path.join(HOME_DIR, '.openclaw', 'usage_telemetry.svg');
-      const content = await fs.readFile(svgPath);
-      
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'image/svg+xml');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.end(content);
-      return true;
-    } catch (err) {
-      res.statusCode = 404;
-      res.end('Telemetry SVG not found');
-      return true;
+  const HOME_DIR = process.env.HOME || '/home/user';
+  const OPENCLAW_DIR = path.join(HOME_DIR, '.openclaw');
+
+  if (req.method === 'GET') {
+    if (req.url.includes('/api/telemetry/chart.svg')) {
+      try {
+        const content = await fs.readFile(path.join(OPENCLAW_DIR, 'usage_telemetry.svg'));
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'image/svg+xml');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.end(content);
+        return true;
+      } catch (e) {
+        res.statusCode = 404; res.end('SVG not found'); return true;
+      }
+    }
+    if (req.url.includes('/api/telemetry/feed.xml')) {
+      try {
+        const content = await fs.readFile(path.join(OPENCLAW_DIR, 'telemetry_feed.xml'));
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/rss+xml');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.end(content);
+        return true;
+      } catch (e) {
+        res.statusCode = 404; res.end('Feed not found'); return true;
+      }
     }
   }
   return false;

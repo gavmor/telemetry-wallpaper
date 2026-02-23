@@ -8,8 +8,8 @@ A real-time token usage telemetry collector and SVG renderer for **OpenClaw**.
 - **Granular Data:** Processes session logs with 15-minute interval precision.
 - **Semantic Spikes:** Automatically identifies usage spikes (>50k tokens) and attributes them to the specific channel/user.
 - **Beautiful Visualization:** Generates a 1080p SVG chart with a **Gruvbox Dark** theme.
-- **Privacy First:** Stores historical data in a secure, isolated directory (`~/.openclaw/storage/plugins/telemetry-collector/`).
-- **Unixy Architecture:** A pure data generator that emits events and exposes an HTTP endpoint for remote delivery.
+- **Remote Delivery:** Exposes an HTTP endpoint and an **RSS Feed** for cross-device wallpaper syncing.
+- **Unixy Architecture:** A pure data generator that emits events and lets you pipe the output anywhere.
 
 ## 🛠 Installation
 
@@ -17,49 +17,47 @@ A real-time token usage telemetry collector and SVG renderer for **OpenClaw**.
 openclaw plugins install https://github.com/gavmor/telemetry-wallpaper
 ```
 
-## 📊 Usage
+## 📊 Endpoints
 
-The extension automatically updates a telemetry chart at `~/.openclaw/usage_telemetry.svg` after every agent turn.
+The extension exposes the following endpoints via the OpenClaw Gateway (default port `18789`):
 
-### Local Linux Integration (Cinnamon)
+- **SVG Chart:** `GET /api/telemetry/chart.svg` (The latest 1080p chart)
+- **RSS Feed:** `GET /api/telemetry/feed.xml` (Updates on new charts and usage spikes)
+
+## 🖥 Desktop Integration
+
+### Local Linux (Cinnamon)
 
 ```bash
 gsettings set org.cinnamon.desktop.background picture-uri "file://$HOME/.openclaw/usage_telemetry.svg"
-gsettings set org.cinnamon.desktop.background picture-options "scaled"
 ```
 
-### Remote MacBook Integration
+### Remote MacBook (via launchd)
 
-If you run OpenClaw on a remote machine (e.g., a Mac Mini) and want the wallpaper on your MacBook, use the built-in HTTP endpoint.
-
-1. **Expose the Gateway:** Ensure your OpenClaw Gateway port (default `18789`) is accessible from your MacBook.
-2. **MacBook Bridge Script:** Save this script as `update_wallpaper.sh` on your MacBook:
-
+1. Create a bridge script `~/bin/sync-telemetry.sh`:
 ```bash
 #!/bin/bash
-# Update local wallpaper from remote OpenClaw Gateway
 REMOTE_URL="http://macmini.local:18789/api/telemetry/chart.svg"
 LOCAL_PATH="$HOME/Pictures/openclaw_telemetry.svg"
-
 curl -s -o "$LOCAL_PATH" "$REMOTE_URL"
-osascript -e "tell application \"Finder\" to set desktop picture to POSIX file \"$LOCAL_PATH\""
+osascript -e "tell application \"System Events\" to set picture of every desktop to \"$LOCAL_PATH\""
 ```
 
-3. **Schedule:** Run this script via `cron` or an OpenClaw hook on your MacBook.
-
-## 🔌 Integration API
-
-### HTTP Endpoint
-Exposes the latest SVG at: `GET /api/telemetry/chart.svg`
-
-### Event Hook
-Other extensions can listen for updates:
-
-```javascript
-api.on('telemetry:updated', ({ path }) => {
-  console.log(`New telemetry chart available at: ${path}`);
-});
+2. Create a LaunchAgent at `~/Library/LaunchAgents/com.openclaw.telemetry.plist`:
+```xml
+<!-- Run every 15 minutes -->
+<dict>
+    <key>Label</key><string>com.openclaw.telemetry</string>
+    <key>ProgramArguments</key><array><string>/Users/youruser/bin/sync-telemetry.sh</string></array>
+    <key>StartInterval</key><integer>900</integer>
+</dict>
 ```
+
+3. Load it: `launchctl load ~/Library/LaunchAgents/com.openclaw.telemetry.plist`
+
+### No-Code (Standard RSS Tools)
+
+You can point any generic RSS-to-Wallpaper app (like `DailyWallpaper` on macOS) to the `/api/telemetry/feed.xml` endpoint. This will automatically sync the chart and can even notify you of usage spikes.
 
 ## 📜 License
 
