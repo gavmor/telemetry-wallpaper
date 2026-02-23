@@ -22,10 +22,13 @@ export default function register(api) {
     api.on('message_received', () => handleUpdate('message_received'));
 
     // Register HTTP handler for remote delivery
-    api.registerHttpHandler(handleTelemetryHttpRequest);
+    api.registerHttpHandler((req, res) => handleTelemetryHttpRequest(req, res, api));
 
     // Initial trigger
     setTimeout(() => handleUpdate('registration'), 2000);
+
+    // Heartbeat every 15 minutes to keep the clock/chart fresh
+    setInterval(() => handleUpdate('heartbeat'), 15 * 60 * 1000);
 
     console.log('telemetry-wallpaper: extension registered and armed with HTTP server');
   } catch (err) {

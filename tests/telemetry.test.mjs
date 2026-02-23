@@ -42,7 +42,6 @@ describe('extension registration health check', () => {
     
     // Verify HTTP handler
     expect(registeredHttpHandler).toBeTypeOf('function');
-    expect(registeredHttpHandler.name).toBe('handleTelemetryHttpRequest');
   });
 });
 
