@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Data Collector & Orchestrator.
  */
-export async function runTelemetry(api) {
+export async function runTelemetry(api, options = {}) {
   // Conditional import for canvas
   let createCanvas, loadImage, GlobalFonts;
   try {
@@ -22,20 +22,10 @@ export async function runTelemetry(api) {
     const bundledFont = path.join(__dirname, '../assets/JetBrainsMono.ttf');
     try {
       await fs.access(bundledFont);
-      GlobalFonts.registerFromPath(bundledFont, 'monospace');
+      const registered = GlobalFonts.registerFromPath(bundledFont, 'JetBrains Mono');
+      if (registered) console.log('telemetry-collector: registered JetBrains Mono');
     } catch (e) {
       console.warn('telemetry-collector: Bundled font not found, falling back to system fonts');
-      const fontPaths = [
-        '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
-        '/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf'
-      ];
-      for (const f of fontPaths) {
-        try {
-          await fs.access(f);
-          GlobalFonts.registerFromPath(f, 'monospace');
-          break;
-        } catch (e) {}
-      }
     }
   } catch (e) {
     console.warn('telemetry-collector: @napi-rs/canvas not found, PNG rendering disabled');
@@ -144,11 +134,12 @@ export async function runTelemetry(api) {
     spikes: state.spikes[todayStr] || []
   }, {
     resolution: pluginCfg.resolution,
-    theme: pluginCfg.theme
+    theme: pluginCfg.theme,
+    debug: options.debug
   });
 
   const svgPath = path.join(OPENCLAW_DIR, 'usage_telemetry.svg');
-  await fs.writeFile(svgPath, svg);
+  if (!options.debug) await fs.writeFile(svgPath, svg);
 
   const timestamp = Math.floor(now.getTime() / 1000);
   let latestPngName = 'usage_telemetry.png';
@@ -166,6 +157,8 @@ export async function runTelemetry(api) {
       const buffer = canvas.toBuffer('image/png');
       latestPngName = `chart_${timestamp}.png`;
       
+      if (options.debug) return buffer; // Return buffer directly for HTTP debug request
+
       // Save primary artifact
       await fs.writeFile(path.join(OPENCLAW_DIR, 'usage_telemetry.png'), buffer);
       
@@ -173,7 +166,7 @@ export async function runTelemetry(api) {
       const wallDir = path.join(OPENCLAW_DIR, 'wallpaper');
       await fs.mkdir(wallDir, { recursive: true });
       
-      // Cleanup old charts to prevent bloat
+      // Cleanup old charts
       const oldFiles = await fs.readdir(wallDir);
       for (const file of oldFiles) {
         if (file.startsWith('chart_') && file.endsWith('.png')) {
@@ -208,9 +201,12 @@ export async function runTelemetry(api) {
 /**
  * Handles HTTP requests to serve the telemetry SVG and RSS feed.
  */
-export async function handleTelemetryHttpRequest(req, res) {
+export async function handleTelemetryHttpRequest(req, res, api) {
   const HOME_DIR = process.env.HOME || '/home/user';
   const OPENCLAW_DIR = path.join(HOME_DIR, '.openclaw');
+
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const isDebug = url.searchParams.get('debug') === 'true';
 
   if (req.method === 'GET') {
     if (req.url.includes('/api/telemetry/chart.svg')) {
@@ -225,10 +221,17 @@ export async function handleTelemetryHttpRequest(req, res) {
         res.statusCode = 404; res.end('SVG not found'); return true;
       }
     }
-    // Match any PNG request in the telemetry namespace
-    if (req.url.match(/\/api\/telemetry\/.*\.png/)) {
+    
+    // Match any PNG request or debug request
+    if (req.url.match(/\/api\/telemetry\/.*\.png/) || (req.url.includes('/api/telemetry/chart') && isDebug)) {
       try {
-        const content = await fs.readFile(path.join(OPENCLAW_DIR, 'usage_telemetry.png'));
+        let content;
+        if (isDebug) {
+          // Force a fresh render with debug mark
+          content = await runTelemetry(api, { debug: true });
+        } else {
+          content = await fs.readFile(path.join(OPENCLAW_DIR, 'usage_telemetry.png'));
+        }
         res.statusCode = 200;
         res.setHeader('Content-Type', 'image/png');
         res.setHeader('Cache-Control', 'no-cache');
@@ -238,6 +241,7 @@ export async function handleTelemetryHttpRequest(req, res) {
         res.statusCode = 404; res.end('PNG not found'); return true;
       }
     }
+    
     if (req.url.includes('/api/telemetry/feed.xml')) {
       try {
         const content = await fs.readFile(path.join(OPENCLAW_DIR, 'telemetry_feed.xml'));

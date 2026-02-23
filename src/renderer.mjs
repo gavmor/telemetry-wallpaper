@@ -100,22 +100,33 @@ export function renderUsageSVG(data, options = {}) {
   const scaleX = (i) => marginL + (i / 95) * chartW;
   const scaleY = (v) => resH - marginB - (v / adjMax) * chartH;
 
+  const FONT = "'JetBrains Mono', monospace";
+
   // 6. Build SVG
   let svg = `<svg width="${resW}" height="${resH}" xmlns="http://www.w3.org/2000/svg">`;
   svg += `<rect width="100%" height="100%" fill="${BG}" />`;
   
+  // Debug Proofing Mark (Alternates position/color to prove refresh)
+  if (options.debug) {
+    const isEven = Math.floor(Date.now() / 1000) % 2 === 0;
+    const markColor = isEven ? "#fb4934" : "#b8bb26";
+    const markX = isEven ? resW - 40 : resW - 60;
+    svg += `<rect x="${markX}" y="${resH - 40}" width="20" height="20" fill="${markColor}" opacity="0.5" />`;
+    svg += `<text x="${resW - 100}" y="${resH - 25}" font-family="${FONT}" font-size="10" fill="${GRAY}">DEBUG MODE</text>`;
+  }
+
   // Format title without UTC slipping (YYYY-MM-DD -> Local readable)
   const [y, m, d] = date.split('-').map(Number);
   const titleDate = new Date(y, m - 1, d);
   const title = `${customTitle}: ${titleDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}`;
   
-  svg += `<text x="${marginL + chartW/2}" y="60" font-family="monospace" font-size="32" font-weight="bold" text-anchor="middle" fill="${FG}">${title}</text>`;
+  svg += `<text x="${marginL + chartW/2}" y="60" font-family="${FONT}" font-size="32" font-weight="bold" text-anchor="middle" fill="${FG}">${title}</text>`;
 
   // Y-Axis
   [0, adjMax / 2, adjMax].forEach(tick => {
     const y = scaleY(tick);
     svg += `<line x1="${marginL}" y1="${y}" x2="${marginL + chartW}" y2="${y}" stroke="${GRID}" stroke-width="1" />`;
-    svg += `<text x="${marginL - 15}" y="${y + 4}" font-family="monospace" font-size="12" text-anchor="end" fill="${GRAY}">${tick.toLocaleString()}</text>`;
+    svg += `<text x="${marginL - 15}" y="${y + 4}" font-family="${FONT}" font-size="12" text-anchor="end" fill="${GRAY}">${tick.toLocaleString()}</text>`;
   });
 
   // Areas
@@ -137,7 +148,7 @@ export function renderUsageSVG(data, options = {}) {
     const yP = marginT + i * 20;
     const op = lab.includes('Cache') ? "0.3" : "0.8";
     svg += `<rect x="${resW - 300}" y="${yP}" width="10" height="10" fill="${seriesColors[i]}" opacity="${op}" />`;
-    svg += `<text x="${resW - 285}" y="${yP + 10}" font-family="monospace" font-size="12" fill="${FG}">${lab}</text>`;
+    svg += `<text x="${resW - 285}" y="${yP + 10}" font-family="${FONT}" font-size="12" fill="${FG}">${lab}</text>`;
   });
 
   // Spikes
@@ -151,7 +162,7 @@ export function renderUsageSVG(data, options = {}) {
     svg += `<circle cx="${x}" cy="${y}" r="3" fill="white" />`;
     const yOff = (x - lastLabelX) > 100 ? -15 : -30;
     lastLabelX = x;
-    svg += `<text x="${x}" y="${y + yOff}" font-family="monospace" font-size="10" fill="${FG}" text-anchor="middle">${spike.channel}</text>`;
+    svg += `<text x="${x}" y="${y + yOff}" font-family="${FONT}" font-size="10" fill="${FG}" text-anchor="middle">${spike.channel}</text>`;
   });
 
   // X-Axis
@@ -159,7 +170,7 @@ export function renderUsageSVG(data, options = {}) {
     const lbl = fixedIntervals[i].split(' ')[1];
     const x = scaleX(i);
     const y = resH - marginB + 30;
-    svg += `<text x="${x}" y="${y}" font-family="monospace" font-size="12" text-anchor="middle" transform="rotate(35, ${x}, ${y})" fill="${GRAY}">${lbl}</text>`;
+    svg += `<text x="${x}" y="${y}" font-family="${FONT}" font-size="12" text-anchor="middle" transform="rotate(35, ${x}, ${y})" fill="${GRAY}">${lbl}</text>`;
   }
 
   svg += `</svg>`;
