@@ -1,40 +1,72 @@
+import RSS from 'rss';
+
 /**
- * RSS Feed Generator for Telemetry (Variety-optimized).
- * Pure string template for absolute control over MediaRSS attributes.
+ * RSS Feed Generator for Telemetry using the 'rss' library.
+ * High-level abstraction with robust attribute support for MediaRSS.
  */
 export function renderTelemetryRSS({ todayStr, spikes, now = new Date() }, options = {}) {
   const filename = options.filename || 'usage_telemetry.png';
-  const baseUrl = options.chartUrlBase || `http://localhost:18789/api/telemetry/${filename}`;
+  const chartUrl = options.chartUrlBase || `http://127.0.0.1:18789/api/telemetry/${filename}`;
   const width = options.width || "1920";
   const height = options.height || "1080";
   
-  const rssItems = (spikes || []).slice(-10).reverse().map(s => `
-    <item>
-      <title>Usage Spike: ${s.tokens.toLocaleString()} tokens</title>
-      <description>Model: ${s.model} | Channel: ${s.channel}</description>
-      <pubDate>${new Date(s.timestamp).toUTCString()}</pubDate>
-      <link>${baseUrl}</link>
-      <enclosure url="${baseUrl}" length="0" type="image/png" />
-      <media:content url="${baseUrl}" medium="image" type="image/png" width="${width}" height="${height}" />
-      <guid isPermaLink="false">${s.timestamp}-${s.tokens}</guid>
-    </item>`).join('');
+  const feed = new RSS({
+    title: "OpenClaw Telemetry",
+    description: "Real-time token usage and spikes",
+    feed_url: "http://127.0.0.1:18789/api/telemetry/feed.xml",
+    site_url: "http://127.0.0.1:18789",
+    language: "en",
+    pubDate: now,
+    generator: "OpenClaw Feed Builder",
+    custom_namespaces: {
+      'media': 'http://search.yahoo.com/mrss/'
+    }
+  });
 
-  return `<?xml version="1.0" encoding="UTF-8" ?>
-<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
-<channel>
-  <title>OpenClaw Telemetry</title>
-  <description>Real-time token usage and spikes</description>
-  <link>http://localhost:18789</link>
-  <lastBuildDate>${now.toUTCString()}</lastBuildDate>
-  <item>
-    <title>Latest Telemetry Chart</title>
-    <description>The current usage visualization PNG</description>
-    <pubDate>${now.toUTCString()}</pubDate>
-    <link>${baseUrl}</link>
-    <enclosure url="${baseUrl}" length="0" type="image/png" />
-    <media:content url="${baseUrl}" medium="image" type="image/png" width="${width}" height="${height}" />
-    <guid isPermaLink="false">chart-${todayStr}-${Math.floor(now.getTime() / (15 * 60 * 1000))}</guid>
-  </item>${rssItems}
-</channel>
-</rss>`;
+  const customElements = [
+    {
+      'media:content': {
+        _attr: {
+          url: chartUrl,
+          type: 'image/png',
+          medium: 'image',
+          width,
+          height
+        }
+      }
+    },
+    {
+      'enclosure': {
+        _attr: {
+          url: chartUrl,
+          type: 'image/png',
+          length: '0'
+        }
+      }
+    }
+  ];
+
+  // 1. Add the Main Chart Item
+  feed.item({
+    title: "Latest Telemetry Chart",
+    description: "The current usage visualization PNG",
+    url: chartUrl,
+    date: now,
+    guid: `chart-${todayStr}-${Math.floor(now.getTime() / (15 * 60 * 1000))}`,
+    custom_elements: customElements
+  });
+
+  // 2. Add Spike Items
+  (spikes || []).slice(-10).reverse().forEach(s => {
+    feed.item({
+      title: `Usage Spike: ${s.tokens.toLocaleString()} tokens`,
+      description: `Model: ${s.model} | Channel: ${s.channel}`,
+      url: chartUrl,
+      date: new Date(s.timestamp),
+      guid: `${s.timestamp}-${s.tokens}`,
+      custom_elements: customElements
+    });
+  });
+
+  return feed.xml({ indent: true });
 }
