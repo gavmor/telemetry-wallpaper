@@ -5,9 +5,6 @@ import { promisify } from 'node:util';
 
 const execAsync = promisify(exec);
 
-/**
- * Core telemetry processing and SVG generation migrated from Python.
- */
 export async function runTelemetry(api) {
   // 1. Robust Path Resolution
   const HOME_DIR = process.env.HOME || '/home/user';
@@ -91,12 +88,14 @@ export async function runTelemetry(api) {
         if (entry.type === 'message' && entry.message) {
           const msg = entry.message;
           if (msg.usage) {
-            const dtLocal = new Date(entry.timestamp);
-            const dayStr = dtLocal.toISOString().split('T')[0];
+            // FIX: Use proper local date formatting instead of ISO split (which is always UTC)
+            const dt = new Date(entry.timestamp);
             
-            const minute = Math.floor(dtLocal.getMinutes() / 15) * 15;
-            const hour = dtLocal.getHours();
-            const intervalStr = `${dayStr} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            // Generate local-aware keys
+            const pad = (n) => String(n).padStart(2, '0');
+            const dayStr = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+            const minute = Math.floor(dt.getMinutes() / 15) * 15;
+            const intervalStr = `${dayStr} ${pad(dt.getHours())}:${pad(minute)}`;
             
             const provider = msg.provider || 'unknown';
             const model = msg.model || 'unknown';
@@ -156,14 +155,16 @@ export async function runTelemetry(api) {
 
   // 6. SVG Rendering
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
-  const todayDt = new Date(todayStr);
+  const pad = (n) => String(n).padStart(2, '0');
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  
+  const todayDt = new Date(now);
   todayDt.setHours(0, 0, 0, 0);
   
   const fixedIntervals = [];
   for (let i = 0; i < 96; i++) {
     const d = new Date(todayDt.getTime() + (i * 15 * 60 * 1000));
-    fixedIntervals.push(`${todayStr} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`);
+    fixedIntervals.push(`${todayStr} ${pad(d.getHours())}:${pad(d.getMinutes())}`);
   }
 
   const todayData = state.daily_stats[todayStr] || {};
@@ -199,7 +200,7 @@ export async function runTelemetry(api) {
   }
 
   const stacks = [];
-  for (let sIdx = 0; sIdx < seriesData.length; sIdx++) {
+  for (let sIdx = 0; sIdx < seriesLabels.length; sIdx++) {
     const row = [];
     for (let hIdx = 0; hIdx < 96; hIdx++) {
       let val = seriesData[sIdx][hIdx];
