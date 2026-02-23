@@ -3,20 +3,20 @@ import path from 'node:path';
 import { renderUsageSVG } from './renderer.mjs';
 import { renderTelemetryRSS } from './rss.mjs';
 
-// Conditional import for canvas
-let createCanvas, loadImage;
-try {
-  const canvas = await import('@napi-rs/canvas');
-  createCanvas = canvas.createCanvas;
-  loadImage = canvas.loadImage;
-} catch (e) {
-  console.warn('telemetry-collector: @napi-rs/canvas not found, PNG rendering disabled');
-}
-
 /**
  * Data Collector & Orchestrator.
  */
 export async function runTelemetry(api) {
+  // Conditional import for canvas
+  let createCanvas, loadImage;
+  try {
+    const canvas = await import('@napi-rs/canvas');
+    createCanvas = canvas.createCanvas;
+    loadImage = canvas.loadImage;
+  } catch (e) {
+    console.warn('telemetry-collector: @napi-rs/canvas not found, PNG rendering disabled');
+  }
+
   const HOME_DIR = process.env.HOME || '/home/user';
   let OPENCLAW_DIR = path.join(HOME_DIR, '.openclaw');
   if (typeof api.getPaths === 'function') OPENCLAW_DIR = api.getPaths().stateDir;
