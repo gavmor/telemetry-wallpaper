@@ -4,6 +4,10 @@
   "description": "Real-time token usage telemetry as a Cinnamon desktop background.",
   "type": "module",
   "main": "index.mjs",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "files": [
     "index.mjs",
     "openclaw.plugin.json",
@@ -24,5 +28,9 @@
   "bugs": {
     "url": "https://github.com/gavmor/telemetry-wallpaper/issues"
   },
-  "homepage": "https://github.com/gavmor/telemetry-wallpaper#readme"
+  "homepage": "https://github.com/gavmor/telemetry-wallpaper#readme",
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "vitest": "^4.0.18"
+  }
 }
