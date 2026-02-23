@@ -162,6 +162,8 @@ export async function runTelemetry(api) {
     }
   }
   
+  const [w, h] = (pluginCfg.resolution || '1920x1080').split('x').map(Number);
+
   // Variety-compatible Media RSS Feed
   const rssPath = path.join(OPENCLAW_DIR, 'telemetry_feed.xml');
   const rss = renderTelemetryRSS({
@@ -169,7 +171,9 @@ export async function runTelemetry(api) {
     spikes: state.spikes[todayStr] || [],
     now
   }, {
-    filename: latestPngName
+    filename: latestPngName,
+    width: String(w),
+    height: String(h)
   });
   await fs.writeFile(rssPath, rss);
 

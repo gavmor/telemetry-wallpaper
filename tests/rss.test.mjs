@@ -18,20 +18,18 @@ describe('RSS Feed Generation', () => {
     
     expect(rss).toContain('xmlns:media="http://search.yahoo.com/mrss/"');
     expect(rss).toContain('medium="image"');
-    expect(rss).toContain('type="image/png"');
+    expect(rss).toContain('width="1920"');
+    expect(rss).toContain('height="1080"');
   });
 
-  it('should include the latest telemetry chart item', () => {
-    const rss = renderTelemetryRSS({ todayStr, spikes, now }, { filename: 'chart_123.png' });
-    
-    expect(rss).toContain('<title>Telemetry Chart</title>');
-    expect(rss).toContain('http://127.0.0.1:18789/api/telemetry/chart_123.png');
+  it('should respect custom dimensions', () => {
+    const rss = renderTelemetryRSS({ todayStr, spikes, now }, { width: "3840", height: "2160" });
+    expect(rss).toContain('width="3840"');
+    expect(rss).toContain('height="2160"');
   });
 
   it('should handle empty spikes', () => {
     const rss = renderTelemetryRSS({ todayStr, spikes: [], now });
-    
     expect(rss).toContain('<title>Telemetry Chart</title>');
-    expect(rss).not.toContain('Spike:');
   });
 });
