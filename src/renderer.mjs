@@ -106,13 +106,16 @@ export function renderUsageSVG(data, options = {}) {
   let svg = `<svg width="${resW}" height="${resH}" xmlns="http://www.w3.org/2000/svg">`;
   svg += `<rect width="100%" height="100%" fill="${BG}" />`;
   
-  // Debug Proofing Mark (Alternates position/color to prove refresh)
+  // Debug Proofing Mark (Large and obvious to prove refresh)
   if (options.debug) {
-    const isEven = Math.floor(Date.now() / 1000) % 2 === 0;
-    const markColor = isEven ? "#fb4934" : "#b8bb26";
-    const markX = isEven ? resW - 40 : resW - 60;
-    svg += `<rect x="${markX}" y="${resH - 40}" width="20" height="20" fill="${markColor}" opacity="0.5" />`;
-    svg += `<text x="${resW - 100}" y="${resH - 25}" font-family="${FONT}" font-size="10" fill="${GRAY}">DEBUG MODE</text>`;
+    const now = new Date();
+    const isEven = now.getSeconds() % 2 === 0;
+    const markColor = isEven ? "#fb4934" : "#b8bb26"; // Gruvbox Red / Green
+    const markX = resW - 150;
+    const markY = resH - 150;
+    svg += `<rect x="${markX}" y="${markY}" width="120" height="120" fill="${markColor}" />`;
+    svg += `<text x="${markX + 60}" y="${markY + 75}" font-family="${FONT}" font-size="60" font-weight="bold" fill="#282828" text-anchor="middle">${now.getSeconds()}</text>`;
+    svg += `<text x="${resW - 90}" y="${markY - 15}" font-family="${FONT}" font-size="16" font-weight="bold" fill="${FG}" text-anchor="middle">DEBUG ACTIVE</text>`;
   }
 
   // Format title without UTC slipping (YYYY-MM-DD -> Local readable)
