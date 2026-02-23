@@ -2,10 +2,12 @@
 
 # Get the directory where the script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PLUGIN_DIR="$( dirname "$SCRIPT_DIR" )"
 OPENCLAW_DIR="/home/user/.openclaw"
 
-# Run the plot script to generate/update the SVG
-/usr/bin/python3 "$SCRIPT_DIR/plot_hourly_usage.py"
+# Use uv to run the main.py script
+cd "$PLUGIN_DIR"
+/home/user/.local/share/mise/installs/uv/0.10.4/uv-x86_64-unknown-linux-musl/uv run main.py
 
 # Path to the generated SVG
 SVG_PATH="$OPENCLAW_DIR/hourly_model_usage.svg"
