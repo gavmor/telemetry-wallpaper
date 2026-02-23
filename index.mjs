@@ -10,7 +10,9 @@ export default function register(api) {
     try {
       // Find the extension directory
       const pluginDir = path.dirname(new URL(import.meta.url).pathname);
-      const updateScript = path.join(pluginDir, 'src', 'update_wallpaper.sh');
+      // On some systems pathname might start with / on windows or have issues
+      const cleanPluginDir = pluginDir.startsWith('file:') ? new URL(pluginDir).pathname : pluginDir;
+      const updateScript = path.join(cleanPluginDir, 'src', 'update_wallpaper.sh');
 
       // Trigger our optimized Python logic
       await execAsync(`/usr/bin/bash "${updateScript}"`);

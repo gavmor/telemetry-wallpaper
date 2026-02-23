@@ -5,7 +5,8 @@ import math
 from datetime import datetime, timedelta
 
 # Paths
-OPENCLAW_DIR = "/home/user/.openclaw"
+HOME_DIR = os.path.expanduser("~")
+OPENCLAW_DIR = os.path.join(HOME_DIR, ".openclaw")
 SESSIONS_DIR = os.path.join(OPENCLAW_DIR, "agents/main/sessions")
 SESSIONS_CONFIG = os.path.join(SESSIONS_DIR, "sessions.json")
 HISTORY_DIR = os.path.join(OPENCLAW_DIR, "usage_history")
@@ -193,7 +194,7 @@ for spike in today_spikes:
         y_offset = -15 if (x - last_label_x) > 100 else -30
         last_label_x = x
         
-        label_text = spike["channel"] # e.g. matrix/Gavin Morgan
+        label_text = spike["channel"] # e.g. matrix/user_label
         svg.append(f'<text x="{x}" y="{y + y_offset}" font-family="monospace" font-size="10" fill="{FG}" text-anchor="middle">{label_text}</text>')
     except: continue
 
