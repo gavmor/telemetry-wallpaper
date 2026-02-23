@@ -18,7 +18,7 @@ export async function runTelemetry(api) {
 
   const SESSIONS_DIR = path.join(OPENCLAW_DIR, 'agents/main/sessions');
   const SESSIONS_CONFIG = path.join(SESSIONS_DIR, 'sessions.json');
-  const HISTORY_DIR = path.join(OPENCLAW_DIR, 'usage_history');
+  const HISTORY_DIR = path.join(OPENCLAW_DIR, 'storage/plugins/telemetry-wallpaper');
   const STATE_PATH = path.join(HISTORY_DIR, 'process_state.json');
   
   const pluginCfg = api.pluginConfig || {};
