@@ -1,38 +1,31 @@
 /**
- * RSS Feed Generator for Telemetry.
+ * RSS Feed Generator for Telemetry (Variety-optimized).
  */
 export function renderTelemetryRSS({ todayStr, spikes, now = new Date() }, options = {}) {
-  // Use the unique filename if provided, otherwise fallback
   const filename = options.filename || 'usage_telemetry.png';
-  const baseUrl = options.chartUrlBase || `http://localhost:18789/api/telemetry/${filename}`;
+  const baseUrl = options.chartUrlBase || `http://127.0.0.1:18789/api/telemetry/${filename}`;
   
-  // Variety and many RSS readers prefer <enclosure> for images
   const rssItems = (spikes || []).slice(-10).reverse().map(s => `
     <item>
-      <title>Usage Spike: ${s.tokens.toLocaleString()} tokens</title>
-      <description>Model: ${s.model} | Channel: ${s.channel}</description>
-      <pubDate>${new Date(s.timestamp).toUTCString()}</pubDate>
+      <title>Spike: ${s.tokens.toLocaleString()}</title>
       <link>${baseUrl}</link>
-      <enclosure url="${baseUrl}" length="0" type="image/png" />
-      <media:content url="${baseUrl}" type="image/png" />
-      <guid>${s.timestamp}-${s.tokens}</guid>
+      <media:content url="${baseUrl}" medium="image" type="image/png" />
+      <guid isPermaLink="false">${s.timestamp}-${s.tokens}</guid>
+      <pubDate>${new Date(s.timestamp).toUTCString()}</pubDate>
     </item>`).join('');
 
   return `<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
 <channel>
   <title>OpenClaw Telemetry</title>
-  <description>Real-time token usage and spikes</description>
-  <link>http://localhost:18789</link>
-  <lastBuildDate>${now.toUTCString()}</lastBuildDate>
+  <link>http://127.0.0.1:18789</link>
+  <description>Real-time token usage</description>
   <item>
-    <title>Latest Telemetry Chart</title>
-    <description>The current usage visualization PNG</description>
-    <pubDate>${now.toUTCString()}</pubDate>
+    <title>Telemetry Chart</title>
     <link>${baseUrl}</link>
-    <enclosure url="${baseUrl}" length="0" type="image/png" />
-    <media:content url="${baseUrl}" type="image/png" />
-    <guid>chart-${todayStr}-${Math.floor(now.getTime() / (15 * 60 * 1000))}</guid>
+    <media:content url="${baseUrl}" medium="image" type="image/png" />
+    <guid isPermaLink="false">chart-${todayStr}-${Math.floor(now.getTime() / (15 * 60 * 1000))}</guid>
+    <pubDate>${now.toUTCString()}</pubDate>
   </item>${rssItems}
 </channel>
 </rss>`;
