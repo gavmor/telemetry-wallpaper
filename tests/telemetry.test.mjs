@@ -55,7 +55,7 @@ describe('telemetry-wallpaper core logic', () => {
     await fs.writeFile(logPath, JSON.stringify(entry) + '\n');
     await runTelemetry(mockApi);
 
-    const svgPath = path.join(tmpDir, 'hourly_model_usage.svg');
+    const svgPath = path.join(tmpDir, 'usage_telemetry.svg');
     expect(await fs.access(svgPath).then(() => true)).toBe(true);
   });
 
@@ -89,7 +89,7 @@ describe('telemetry-wallpaper core logic', () => {
     const pad = (n) => String(n).padStart(2, '0');
     const localDay = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     
-    const historyPath = path.join(tmpDir, 'storage/plugins/telemetry-wallpaper', `usage_${localDay}.json`);
+    const historyPath = path.join(tmpDir, 'storage/plugins/telemetry-collector', `usage_${localDay}.json`);
     const history = JSON.parse(await fs.readFile(historyPath, 'utf8'));
     
     expect(history.spikes.length).toBe(1);

@@ -1,7 +1,7 @@
 {
-  "id": "telemetry-wallpaper",
-  "name": "Telemetry Wallpaper",
-  "description": "Real-time token usage telemetry as a Cinnamon desktop background.",
+  "id": "telemetry-collector",
+  "name": "Telemetry Collector",
+  "description": "Real-time token usage telemetry collector and SVG renderer.",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
@@ -17,15 +17,6 @@
       "theme": {
         "type": "string",
         "default": "gruvbox-dark"
-      },
-      "wallpaperCommand": {
-        "type": "array",
-        "items": { "type": "string" },
-        "description": "The command to set the wallpaper. Example: ['/usr/bin/feh', '--bg-fill', '$PATH']"
-      },
-      "wallpaperOptions": {
-        "type": "array",
-        "items": { "type": "string" }
       }
     }
   }

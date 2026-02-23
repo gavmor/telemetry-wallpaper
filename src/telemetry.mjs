@@ -1,26 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
 import { renderUsageSVG } from './renderer.mjs';
 
 /**
- * Executes a system command securely.
- */
-function spawnAsync(command, args) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(command, args);
-    let stderr = '';
-    proc.stderr.on('data', (data) => { stderr += data; });
-    proc.on('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`Command ${command} failed with code ${code}: ${stderr}`));
-    });
-  });
-}
-
-/**
  * Data Collector & Orchestrator.
- * Parses logs, manages state, triggers renderer, and executes wallpaper hook.
+ * Strictly limited to log parsing, state management, and SVG generation.
  */
 export async function runTelemetry(api) {
   // 1. Path Resolution
@@ -30,7 +14,7 @@ export async function runTelemetry(api) {
 
   const SESSIONS_DIR = path.join(OPENCLAW_DIR, 'agents/main/sessions');
   const SESSIONS_CONFIG = path.join(SESSIONS_DIR, 'sessions.json');
-  const HISTORY_DIR = path.join(OPENCLAW_DIR, 'storage/plugins/telemetry-wallpaper');
+  const HISTORY_DIR = path.join(OPENCLAW_DIR, 'storage/plugins/telemetry-collector');
   const STATE_PATH = path.join(HISTORY_DIR, 'process_state.json');
   
   const pluginCfg = api.pluginConfig || {};
@@ -111,14 +95,6 @@ export async function runTelemetry(api) {
     state.cursors[filename] = currentSize;
   }
 
-  // Retention & Persistence
-  const allDays = Object.keys(state.daily_stats).sort();
-  if (allDays.length > 7) {
-    for (const oldDay of allDays.slice(0, -7)) {
-      delete state.daily_stats[oldDay];
-      delete state.spikes[oldDay];
-    }
-  }
   await fs.writeFile(STATE_PATH, JSON.stringify(state));
 
   // 4. Update Backups
@@ -128,7 +104,7 @@ export async function runTelemetry(api) {
     }, null, 2));
   }
 
-  // 5. Generate SVG via Renderer
+  // 5. Generate SVG
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
@@ -142,18 +118,12 @@ export async function runTelemetry(api) {
     theme: pluginCfg.theme
   });
 
-  const svgPath = path.join(OPENCLAW_DIR, 'hourly_model_usage.svg');
+  const svgPath = path.join(OPENCLAW_DIR, 'usage_telemetry.svg');
   await fs.writeFile(svgPath, svg);
-
-  // 6. Action: Execute Desktop Bridge (Decoupled)
-  // If the user hasn't provided a command, default to Cinnamon but log it.
-  const wallpaperCmd = pluginCfg.wallpaperCommand || ['/usr/bin/gsettings', 'set', 'org.cinnamon.desktop.background', 'picture-uri', `file://${svgPath}`];
-  const wallpaperOpts = pluginCfg.wallpaperOptions || ['/usr/bin/gsettings', 'set', 'org.cinnamon.desktop.background', 'picture-options', 'scaled'];
-
-  try {
-    await spawnAsync(wallpaperCmd[0], wallpaperCmd.slice(1));
-    await spawnAsync(wallpaperOpts[0], wallpaperOpts.slice(1));
-  } catch (err) {
-    console.error(`telemetry-wallpaper: wallpaper integration failed: ${err.message}`);
+  
+  // Emit event so external extensions or hooks can react
+  if (typeof api.emit === 'function') {
+    api.emit('telemetry:updated', { path: svgPath });
   }
+  console.log(`telemetry-collector: generated ${svgPath}`);
 }
