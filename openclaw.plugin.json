@@ -1,0 +1,23 @@
+{
+  "id": "telemetry-wallpaper",
+  "name": "Telemetry Wallpaper",
+  "description": "Real-time token usage telemetry as a Cinnamon desktop background.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "spikeThreshold": {
+        "type": "number",
+        "default": 50000
+      },
+      "resolution": {
+        "type": "string",
+        "default": "1920x1080"
+      },
+      "theme": {
+        "type": "string",
+        "default": "gruvbox-dark"
+      }
+    }
+  }
+}
