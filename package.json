@@ -1,6 +1,6 @@
 {
   "name": "@gavmor/telemetry-collector",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "Real-time token usage telemetry collector and SVG renderer.",
   "publishConfig": {
     "@gavmor:registry": "https://npm.pkg.github.com"
@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.94",
+    "feed": "^5.2.0",
     "rss": "^1.2.2"
   }
 }
