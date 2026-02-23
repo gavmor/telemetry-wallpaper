@@ -213,58 +213,32 @@ export async function runTelemetry(api, options = {}) {
  * Handles HTTP requests to serve the telemetry SVG and RSS feed.
  */
 export async function handleTelemetryHttpRequest(req, res, api) {
-  const HOME_DIR = process.env.HOME || '/home/user';
-  const OPENCLAW_DIR = path.join(HOME_DIR, '.openclaw');
-
+  const OPENCLAW_DIR = path.join(process.env.HOME || '/home/user', '.openclaw');
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const isDebug = url.searchParams.get('debug') === 'true';
+  const pathName = url.pathname;
 
-  if (req.method === 'GET') {
-    if (req.url.includes('/api/telemetry/chart.svg')) {
-      try {
-        const content = await fs.readFile(path.join(OPENCLAW_DIR, 'usage_telemetry.svg'));
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'image/svg+xml');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.end(content);
-        return true;
-      } catch (e) {
-        res.statusCode = 404; res.end('SVG not found'); return true;
-      }
-    }
-    
-    // Match any PNG request or debug request
-    if (req.url.match(/\/api\/telemetry\/.*\.png/) || (req.url.includes('/api/telemetry/chart') && isDebug)) {
-      try {
-        let content;
-        if (isDebug) {
-          // Force a fresh render with debug mark
-          content = await runTelemetry(api, { debug: true });
-        } else {
-          content = await fs.readFile(path.join(OPENCLAW_DIR, 'usage_telemetry.png'));
-        }
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'image/png');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.end(content);
-        return true;
-      } catch (e) {
-        res.statusCode = 404; res.end('PNG not found'); return true;
-      }
-    }
-    
-    if (req.url.includes('/api/telemetry/feed.xml')) {
-      try {
-        const content = await fs.readFile(path.join(OPENCLAW_DIR, 'telemetry_feed.xml'));
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/rss+xml');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.end(content);
-        return true;
-      } catch (e) {
-        res.statusCode = 404; res.end('Feed not found'); return true;
-      }
-    }
+  if (req.method !== 'GET') return false;
+
+  const routes = {
+    '/api/telemetry/chart.svg': { file: 'usage_telemetry.svg', type: 'image/svg+xml' },
+    '/api/telemetry/feed.xml':  { file: 'telemetry_feed.xml',  type: 'application/rss+xml' },
+    '/api/telemetry/chart.png': { file: 'usage_telemetry.png', type: 'image/png' }
+  };
+
+  const route = routes[pathName] || (pathName.endsWith('.png') ? { file: 'usage_telemetry.png', type: 'image/png' } : null);
+  if (!route && !isDebug) return false;
+
+  try {
+    const content = (isDebug && pathName.includes('chart')) 
+      ? await runTelemetry(api, { debug: true }) 
+      : await fs.readFile(path.join(OPENCLAW_DIR, route.file));
+
+    res.writeHead(200, { 'Content-Type': route?.type || 'image/png', 'Cache-Control': 'no-cache' });
+    res.end(content);
+  } catch (e) {
+    res.statusCode = 404;
+    res.end('Asset not found');
   }
-  return false;
+  return true;
 }
