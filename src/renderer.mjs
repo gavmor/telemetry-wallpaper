@@ -48,11 +48,11 @@ export function renderUsageSVG(data, options = {}) {
 
   const getModelColor = (fullId, index) => {
     const id = fullId.toLowerCase();
-    if (id.includes('anthropic')) return PALETTE[0];
-    if (id.includes('openai'))    return PALETTE[1];
-    if (id.includes('google') || id.includes('gemini')) return PALETTE[2];
-    if (id.includes('ollama'))    return PALETTE[3];
-    if (id.includes('mistral'))   return PALETTE[4];
+    if (id.includes('anthropic')) return PALETTE[3]; // Blue
+    if (id.includes('openai'))    return PALETTE[1]; // Green
+    if (id.includes('google') || id.includes('gemini')) return PALETTE[2]; // Yellow
+    if (id.includes('ollama'))    return PALETTE[4]; // Purple
+    if (id.includes('mistral'))   return PALETTE[5]; // Aqua
     
     // Fallback: Use hash of ID to pick from palette
     let hash = 0;
