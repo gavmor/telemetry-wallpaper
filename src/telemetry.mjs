@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { renderUsageSVG } from './renderer.mjs';
+import { renderTelemetryRSS } from './rss.mjs';
 
 /**
  * Data Collector & Orchestrator.
@@ -117,35 +118,12 @@ export async function runTelemetry(api) {
   await fs.writeFile(svgPath, svg);
   
   // Variety-compatible Media RSS Feed
-  const chartUrl = `http://localhost:18789/api/telemetry/chart.svg?t=${Date.now()}`;
   const rssPath = path.join(OPENCLAW_DIR, 'telemetry_feed.xml');
-  const rssItems = (state.spikes[todayStr] || []).slice(-10).reverse().map(s => `
-    <item>
-      <title>Usage Spike: ${s.tokens.toLocaleString()} tokens</title>
-      <description>Model: ${s.model} | Channel: ${s.channel}</description>
-      <pubDate>${new Date(s.timestamp).toUTCString()}</pubDate>
-      <link>${chartUrl}</link>
-      <media:content url="${chartUrl}" type="image/svg+xml" />
-      <guid>${s.timestamp}-${s.tokens}</guid>
-    </item>`).join('');
-
-  const rss = `<?xml version="1.0" encoding="UTF-8" ?>
-<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
-<channel>
-  <title>OpenClaw Telemetry</title>
-  <description>Real-time token usage and spikes</description>
-  <link>http://localhost:18789</link>
-  <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
-  <item>
-    <title>Latest Telemetry Chart</title>
-    <description>The current usage visualization SVG</description>
-    <pubDate>${new Date().toUTCString()}</pubDate>
-    <link>${chartUrl}</link>
-    <media:content url="${chartUrl}" type="image/svg+xml" />
-    <guid>chart-${todayStr}-${Math.floor(Date.now() / (15 * 60 * 1000))}</guid>
-  </item>${rssItems}
-</channel>
-</rss>`;
+  const rss = renderTelemetryRSS({
+    todayStr,
+    spikes: state.spikes[todayStr] || [],
+    now
+  });
   await fs.writeFile(rssPath, rss);
 
   if (typeof api.emit === 'function') {

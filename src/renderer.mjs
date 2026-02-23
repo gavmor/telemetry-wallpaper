@@ -103,7 +103,12 @@ export function renderUsageSVG(data, options = {}) {
   // 6. Build SVG
   let svg = `<svg width="${resW}" height="${resH}" xmlns="http://www.w3.org/2000/svg">`;
   svg += `<rect width="100%" height="100%" fill="${BG}" />`;
-  const title = `${customTitle}: ${new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}`;
+  
+  // Format title without UTC slipping (YYYY-MM-DD -> Local readable)
+  const [y, m, d] = date.split('-').map(Number);
+  const titleDate = new Date(y, m - 1, d);
+  const title = `${customTitle}: ${titleDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}`;
+  
   svg += `<text x="${marginL + chartW/2}" y="60" font-family="monospace" font-size="32" font-weight="bold" text-anchor="middle" fill="${FG}">${title}</text>`;
 
   // Y-Axis
