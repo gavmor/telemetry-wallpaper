@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderUsageSVG } from './renderer.mjs';
 import { renderTelemetryRSS } from './rss.mjs';
+import { processLogLines } from './processor.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -21,11 +22,8 @@ async function initFonts() {
     const bundledFont = path.join(__dirname, '../assets/JetBrainsMono.ttf');
     try {
       await fs.access(bundledFont);
-      // Register under multiple aliases just in case
       GlobalFonts.registerFromPath(bundledFont, 'JetBrains Mono');
       GlobalFonts.registerFromPath(bundledFont, 'monospace');
-      console.log(`telemetry-collector: registered JetBrains Mono from ${bundledFont}`);
-      console.log('telemetry-collector: available fonts:', GlobalFonts.families.map(f => f.family).join(', '));
       fontsInitialized = true;
     } catch (e) {
       console.error('telemetry-collector: Bundled font not accessible', e);
@@ -89,40 +87,12 @@ export async function runTelemetry(api, options = {}) {
     await fd.read(buffer, 0, length, lastOffset);
     await fd.close();
 
-    const lines = buffer.toString('utf8').split('\n').filter(l => l.trim());
-    let sessionId = filename.replace('.jsonl', '');
-
-    for (const line of lines) {
-      try {
-        const entry = JSON.parse(line);
-        if (entry.type === 'session') sessionId = entry.id || sessionId;
-        if (entry.type === 'message' && entry.message?.usage) {
-          const msg = entry.message;
-          const dt = new Date(entry.timestamp);
-          const pad = (n) => String(n).padStart(2, '0');
-          const dStr = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
-          const intervalStr = `${dStr} ${pad(dt.getHours())}:${pad(Math.floor(dt.getMinutes() / 15) * 15)}`;
-          const fullId = `${msg.provider || 'unknown'}/${msg.model || 'unknown'}`;
-          
-          const active = (msg.usage.input || 0) + (msg.usage.output || 0);
-          const cache = (msg.usage.cacheRead || 0) + (msg.usage.cacheWrite || 0);
-          const total = active + cache || msg.usage.totalTokens || 0;
-
-          if (!state.daily_stats[dStr]) state.daily_stats[dStr] = {};
-          if (!state.daily_stats[dStr][intervalStr]) state.daily_stats[dStr][intervalStr] = {};
-          if (!state.daily_stats[dStr][intervalStr][fullId]) state.daily_stats[dStr][intervalStr][fullId] = { active: 0, cache: 0 };
-          
-          state.daily_stats[dStr][intervalStr][fullId].active += active;
-          state.daily_stats[dStr][intervalStr][fullId].cache += cache;
-          updatedDays.add(dStr);
-
-          if (total > SPIKE_THRESHOLD) {
-            if (!state.spikes[dStr]) state.spikes[dStr] = [];
-            state.spikes[dStr].push({ timestamp: entry.timestamp, interval: intervalStr, model: fullId, tokens: total, channel: sessionMetadata[sessionId] || 'unknown' });
-          }
-        }
-      } catch (e) {}
-    }
+    const { updatedDays: fileDays } = processLogLines(
+      buffer.toString('utf8').split('\n'),
+      state,
+      { sessionMetadata, spikeThreshold: SPIKE_THRESHOLD, initialSessionId: filename.replace('.jsonl', '') }
+    );
+    fileDays.forEach(d => updatedDays.add(d));
     state.cursors[filename] = currentSize;
   }
 
@@ -153,45 +123,32 @@ export async function runTelemetry(api, options = {}) {
 
   const timestamp = Math.floor(now.getTime() / 1000);
   let latestPngName = 'usage_telemetry.png';
-
   const [w, h] = (pluginCfg.resolution || '1920x1080').split('x').map(Number);
 
-  // Variety fix: Render to PNG with unique filename
   if (createCanvas) {
     try {
       const canvas = createCanvas(w, h);
       const ctx = canvas.getContext('2d');
-      
       const img = await loadImage(Buffer.from(svg));
       ctx.drawImage(img, 0, 0, w, h);
-      
       const buffer = canvas.toBuffer('image/png');
       latestPngName = `chart_${timestamp}.png`;
-      
-      if (options.debug) return buffer; // Return buffer directly for HTTP debug request
-
-      // Save primary artifact
+      if (options.debug) return buffer;
       await fs.writeFile(path.join(OPENCLAW_DIR, 'usage_telemetry.png'), buffer);
-      
-      // Mirror to wallpaper dir with unique name for Variety discovery
       const wallDir = path.join(OPENCLAW_DIR, 'wallpaper');
       await fs.mkdir(wallDir, { recursive: true });
-      
-      // Cleanup old charts
       const oldFiles = await fs.readdir(wallDir);
       for (const file of oldFiles) {
         if (file.startsWith('chart_') && file.endsWith('.png')) {
           await fs.unlink(path.join(wallDir, file));
         }
       }
-      
       await fs.writeFile(path.join(wallDir, latestPngName), buffer);
     } catch (e) {
       console.error('telemetry-collector: PNG rendering failed', e);
     }
   }
   
-  // Variety-compatible Media RSS Feed
   const rssPath = path.join(OPENCLAW_DIR, 'telemetry_feed.xml');
   const rss = renderTelemetryRSS({
     todayStr,
@@ -207,38 +164,4 @@ export async function runTelemetry(api, options = {}) {
   if (typeof api.emit === 'function') {
     api.emit('telemetry:updated', { path: svgPath, rssPath });
   }
-}
-
-/**
- * Handles HTTP requests to serve the telemetry SVG and RSS feed.
- */
-export async function handleTelemetryHttpRequest(req, res, api) {
-  const OPENCLAW_DIR = path.join(process.env.HOME || '/home/user', '.openclaw');
-  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const isDebug = url.searchParams.get('debug') === 'true';
-  const pathName = url.pathname;
-
-  if (req.method !== 'GET') return false;
-
-  const routes = {
-    '/api/telemetry/chart.svg': { file: 'usage_telemetry.svg', type: 'image/svg+xml' },
-    '/api/telemetry/feed.xml':  { file: 'telemetry_feed.xml',  type: 'application/rss+xml' },
-    '/api/telemetry/chart.png': { file: 'usage_telemetry.png', type: 'image/png' }
-  };
-
-  const route = routes[pathName] || (pathName.endsWith('.png') ? { file: 'usage_telemetry.png', type: 'image/png' } : null);
-  if (!route && !isDebug) return false;
-
-  try {
-    const content = (isDebug && pathName.includes('chart')) 
-      ? await runTelemetry(api, { debug: true }) 
-      : await fs.readFile(path.join(OPENCLAW_DIR, route.file));
-
-    res.writeHead(200, { 'Content-Type': route?.type || 'image/png', 'Cache-Control': 'no-cache' });
-    res.end(content);
-  } catch (e) {
-    res.statusCode = 404;
-    res.end('Asset not found');
-  }
-  return true;
 }

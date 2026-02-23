@@ -1,4 +1,5 @@
-import { runTelemetry, handleTelemetryHttpRequest } from './src/telemetry.mjs';
+import { runTelemetry } from './src/telemetry.mjs';
+import { handleTelemetryHttpRequest } from './src/server.mjs';
 
 /**
  * Extension entry point.
