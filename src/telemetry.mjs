@@ -6,30 +6,40 @@ import { renderTelemetryRSS } from './rss.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/**
- * Data Collector & Orchestrator.
- */
-export async function runTelemetry(api, options = {}) {
-  // Conditional import for canvas
-  let createCanvas, loadImage, GlobalFonts;
+// Conditional import for canvas - keep static to avoid re-registration
+let createCanvas, loadImage, GlobalFonts;
+let fontsInitialized = false;
+
+async function initFonts() {
+  if (fontsInitialized) return;
   try {
     const canvas = await import('@napi-rs/canvas');
     createCanvas = canvas.createCanvas;
     loadImage = canvas.loadImage;
     GlobalFonts = canvas.GlobalFonts;
 
-    // Register bundled font for portability
     const bundledFont = path.join(__dirname, '../assets/JetBrainsMono.ttf');
     try {
       await fs.access(bundledFont);
-      const registered = GlobalFonts.registerFromPath(bundledFont, 'JetBrains Mono');
-      if (registered) console.log('telemetry-collector: registered JetBrains Mono');
+      // Register under multiple aliases just in case
+      GlobalFonts.registerFromPath(bundledFont, 'JetBrains Mono');
+      GlobalFonts.registerFromPath(bundledFont, 'monospace');
+      console.log(`telemetry-collector: registered JetBrains Mono from ${bundledFont}`);
+      console.log('telemetry-collector: available fonts:', GlobalFonts.families.map(f => f.family).join(', '));
+      fontsInitialized = true;
     } catch (e) {
-      console.warn('telemetry-collector: Bundled font not found, falling back to system fonts');
+      console.error('telemetry-collector: Bundled font not accessible', e);
     }
   } catch (e) {
-    console.warn('telemetry-collector: @napi-rs/canvas not found, PNG rendering disabled');
+    console.warn('telemetry-collector: @napi-rs/canvas not found');
   }
+}
+
+/**
+ * Data Collector & Orchestrator.
+ */
+export async function runTelemetry(api, options = {}) {
+  await initFonts();
 
   const HOME_DIR = process.env.HOME || '/home/user';
   let OPENCLAW_DIR = path.join(HOME_DIR, '.openclaw');
