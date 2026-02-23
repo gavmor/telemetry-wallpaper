@@ -1,4 +1,4 @@
-import { runTelemetry } from './src/telemetry.mjs';
+import { runTelemetry, handleTelemetryHttpRequest } from './src/telemetry.mjs';
 
 /**
  * Extension entry point.
@@ -21,10 +21,13 @@ export default function register(api) {
     api.on('message_sent', () => handleUpdate('message_sent'));
     api.on('message_received', () => handleUpdate('message_received'));
 
+    // Register HTTP handler for remote delivery
+    api.registerHttpHandler(handleTelemetryHttpRequest);
+
     // Initial trigger
     setTimeout(() => handleUpdate('registration'), 2000);
 
-    console.log('telemetry-wallpaper: extension registered and armed');
+    console.log('telemetry-wallpaper: extension registered and armed with HTTP server');
   } catch (err) {
     console.error('telemetry-wallpaper: registration failed', err);
   }

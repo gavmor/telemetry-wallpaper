@@ -4,7 +4,6 @@ import { renderUsageSVG } from './renderer.mjs';
 
 /**
  * Data Collector & Orchestrator.
- * Strictly limited to log parsing, state management, and SVG generation.
  */
 export async function runTelemetry(api) {
   // 1. Path Resolution
@@ -97,14 +96,12 @@ export async function runTelemetry(api) {
 
   await fs.writeFile(STATE_PATH, JSON.stringify(state));
 
-  // 4. Update Backups
   for (const dStr of updatedDays) {
     await fs.writeFile(path.join(HISTORY_DIR, `usage_${dStr}.json`), JSON.stringify({
       date: dStr, updatedAt: new Date().toISOString(), stats: state.daily_stats[dStr], spikes: state.spikes[dStr]
     }, null, 2));
   }
 
-  // 5. Generate SVG
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
@@ -121,9 +118,33 @@ export async function runTelemetry(api) {
   const svgPath = path.join(OPENCLAW_DIR, 'usage_telemetry.svg');
   await fs.writeFile(svgPath, svg);
   
-  // Emit event so external extensions or hooks can react
   if (typeof api.emit === 'function') {
     api.emit('telemetry:updated', { path: svgPath });
   }
   console.log(`telemetry-collector: generated ${svgPath}`);
+}
+
+/**
+ * Handles HTTP requests to serve the telemetry SVG.
+ */
+export async function handleTelemetryHttpRequest(req, res) {
+  // Simple routing for the SVG endpoint
+  if (req.method === 'GET' && req.url.includes('/api/telemetry/chart.svg')) {
+    try {
+      const HOME_DIR = process.env.HOME || '/home/user';
+      const svgPath = path.join(HOME_DIR, '.openclaw', 'usage_telemetry.svg');
+      const content = await fs.readFile(svgPath);
+      
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.end(content);
+      return true;
+    } catch (err) {
+      res.statusCode = 404;
+      res.end('Telemetry SVG not found');
+      return true;
+    }
+  }
+  return false;
 }
