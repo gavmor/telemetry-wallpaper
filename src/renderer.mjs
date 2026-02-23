@@ -36,21 +36,45 @@ export function renderUsageSVG(data, options = {}) {
   const seriesData = [];
 
   const BG = "#282828"; const FG = "#ebdbb2"; const GRAY = "#928374"; const GRID = "#3c3836";
-  const ACTIVE_COLORS = ["#fb4934", "#b8bb26", "#fabd2f", "#83a598", "#d3869b", "#8ec07c", "#fe8019"];
-  const CACHE_COLORS  = ["#cc241d", "#98971a", "#d79921", "#458588", "#b16286", "#689d6a", "#d65d0e"];
+  const PALETTE = [
+    { active: "#fb4934", cache: "#cc241d" }, // Red
+    { active: "#b8bb26", cache: "#98971a" }, // Green
+    { active: "#fabd2f", cache: "#d79921" }, // Yellow
+    { active: "#83a598", cache: "#458588" }, // Blue
+    { active: "#d3869b", cache: "#b16286" }, // Purple
+    { active: "#8ec07c", cache: "#689d6a" }, // Aqua
+    { active: "#fe8019", cache: "#d65d0e" }, // Orange
+  ];
+
+  const getModelColor = (fullId, index) => {
+    const id = fullId.toLowerCase();
+    if (id.includes('anthropic')) return PALETTE[0];
+    if (id.includes('openai'))    return PALETTE[1];
+    if (id.includes('google') || id.includes('gemini')) return PALETTE[2];
+    if (id.includes('ollama'))    return PALETTE[3];
+    if (id.includes('mistral'))   return PALETTE[4];
+    
+    // Fallback: Use hash of ID to pick from palette
+    let hash = 0;
+    for (let i = 0; i < fullId.length; i++) {
+      hash = ((hash << 5) - hash) + fullId.charCodeAt(i);
+      hash |= 0;
+    }
+    return PALETTE[Math.abs(hash) % PALETTE.length];
+  };
 
   for (let i = 0; i < sortedModels.length; i++) {
     const fullId = sortedModels[i];
-    const colorIdx = i % ACTIVE_COLORS.length;
+    const colors = getModelColor(fullId, i);
     const hasCache = fixedIntervals.some(inv => (stats[inv]?.[fullId]?.cache || 0) > 0);
     
     if (hasCache) {
       seriesLabels.push(`${fullId} (Cache)`);
-      seriesColors.push(CACHE_COLORS[colorIdx]);
+      seriesColors.push(colors.cache);
       seriesData.push(fixedIntervals.map(inv => stats[inv]?.[fullId]?.cache || 0));
     }
     seriesLabels.push(`${fullId} (Active)`);
-    seriesColors.push(ACTIVE_COLORS[colorIdx]);
+    seriesColors.push(colors.active);
     seriesData.push(fixedIntervals.map(inv => stats[inv]?.[fullId]?.active || 0));
   }
 
