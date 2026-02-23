@@ -2,6 +2,7 @@ import RSS from 'rss';
 
 /**
  * RSS Feed Generator for Telemetry using the 'rss' library.
+ * Handles Variety compatibility (media:content) and XML namespaces.
  */
 export function renderTelemetryRSS({ todayStr, spikes, now = new Date() }, options = {}) {
   const chartUrlBase = options.chartUrlBase || 'http://localhost:18789/api/telemetry/chart.svg';
