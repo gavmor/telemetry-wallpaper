@@ -1,6 +1,6 @@
 {
   "name": "@gavmor/telemetry-collector",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Real-time token usage telemetry collector and SVG renderer.",
   "publishConfig": {
     "@gavmor:registry": "https://npm.pkg.github.com"
@@ -9,7 +9,8 @@
   "main": "index.mjs",
   "scripts": {
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepare": "husky"
   },
   "files": [
     "index.mjs",
@@ -34,6 +35,7 @@
   "homepage": "https://github.com/gavmor/telemetry-wallpaper#readme",
   "devDependencies": {
     "@types/node": "^25.3.0",
+    "husky": "^9.1.7",
     "vitest": "^4.0.18"
   }
 }

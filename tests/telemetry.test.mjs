@@ -4,8 +4,9 @@ import path from 'node:path';
 import os from 'node:os';
 import { EventEmitter } from 'node:events';
 import { runTelemetry } from '../src/telemetry.mjs';
+import register from '../index.mjs';
 
-// Mock spawn
+// Mock spawn for core tests
 vi.mock('node:child_process', () => {
   const spawn = vi.fn(() => {
     const proc = new EventEmitter();
@@ -16,7 +17,36 @@ vi.mock('node:child_process', () => {
   return { spawn };
 });
 
-describe('telemetry-wallpaper core logic', () => {
+describe('extension registration health check', () => {
+  it('should register exactly the expected hooks and HTTP handlers', () => {
+    const registeredHooks = [];
+    let registeredHttpHandler = null;
+
+    const mockApi = {
+      on: (event, handler) => {
+        registeredHooks.push(event);
+      },
+      registerHttpHandler: (handler) => {
+        registeredHttpHandler = handler;
+      },
+      pluginConfig: {},
+      runtime: { state: { resolveStateDir: () => '/tmp' } }
+    };
+
+    register(mockApi);
+
+    // Verify hooks
+    expect(registeredHooks).toContain('gateway:startup');
+    expect(registeredHooks).toContain('message_sent');
+    expect(registeredHooks).toContain('message_received');
+    
+    // Verify HTTP handler
+    expect(registeredHttpHandler).toBeTypeOf('function');
+    expect(registeredHttpHandler.name).toBe('handleTelemetryHttpRequest');
+  });
+});
+
+describe('telemetry-collector core logic', () => {
   let tmpDir;
   let mockApi;
 
@@ -31,7 +61,9 @@ describe('telemetry-wallpaper core logic', () => {
         spikeThreshold: 1000, 
         resolution: '1920x1080',
         theme: 'gruvbox-dark'
-      }
+      },
+      emit: vi.fn(),
+      on: vi.fn()
     };
   });
 
@@ -39,7 +71,7 @@ describe('telemetry-wallpaper core logic', () => {
     await fs.rm(tmpDir, { recursive: true, force: true });
   });
 
-  it('should parse session logs and generate SVG', async () => {
+  it('should parse session logs and generate SVG and RSS', async () => {
     const sessionsDir = path.join(tmpDir, 'agents/main/sessions');
     const logPath = path.join(sessionsDir, 'test-session.jsonl');
     
@@ -56,7 +88,12 @@ describe('telemetry-wallpaper core logic', () => {
     await runTelemetry(mockApi);
 
     const svgPath = path.join(tmpDir, 'usage_telemetry.svg');
+    const rssPath = path.join(tmpDir, 'telemetry_feed.xml');
     expect(await fs.access(svgPath).then(() => true)).toBe(true);
+    expect(await fs.access(rssPath).then(() => true)).toBe(true);
+    
+    const rssContent = await fs.readFile(rssPath, 'utf8');
+    expect(rssContent).toContain('<media:content');
   });
 
   it('should detect spikes and attribute them correctly', async () => {

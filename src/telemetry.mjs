@@ -159,6 +159,8 @@ export async function handleTelemetryHttpRequest(req, res) {
   const HOME_DIR = process.env.HOME || '/home/user';
   const OPENCLAW_DIR = path.join(HOME_DIR, '.openclaw');
 
+  console.log(`telemetry-collector: HTTP request ${req.method} ${req.url}`);
+
   if (req.method === 'GET') {
     if (req.url.includes('/api/telemetry/chart.svg')) {
       try {
