@@ -126,7 +126,10 @@ export async function runTelemetry(api) {
   const svgPath = path.join(OPENCLAW_DIR, 'usage_telemetry.svg');
   await fs.writeFile(svgPath, svg);
 
-  // Variety fix: Render to PNG if possible
+  const timestamp = Math.floor(now.getTime() / 1000);
+  let latestPngName = 'usage_telemetry.png';
+
+  // Variety fix: Render to PNG with unique filename
   if (createCanvas) {
     try {
       const [w, h] = (pluginCfg.resolution || '1920x1080').split('x').map(Number);
@@ -134,13 +137,26 @@ export async function runTelemetry(api) {
       const ctx = canvas.getContext('2d');
       const img = await loadImage(Buffer.from(svg));
       ctx.drawImage(img, 0, 0, w, h);
-      const pngPath = path.join(OPENCLAW_DIR, 'usage_telemetry.png');
-      await fs.writeFile(pngPath, canvas.toBuffer('image/png'));
       
-      // Mirror to wallpaper dir
+      const buffer = canvas.toBuffer('image/png');
+      latestPngName = `chart_${timestamp}.png`;
+      
+      // Save primary artifact
+      await fs.writeFile(path.join(OPENCLAW_DIR, 'usage_telemetry.png'), buffer);
+      
+      // Mirror to wallpaper dir with unique name for Variety discovery
       const wallDir = path.join(OPENCLAW_DIR, 'wallpaper');
       await fs.mkdir(wallDir, { recursive: true });
-      await fs.writeFile(path.join(wallDir, 'chart.png'), canvas.toBuffer('image/png'));
+      
+      // Cleanup old charts to prevent bloat
+      const oldFiles = await fs.readdir(wallDir);
+      for (const file of oldFiles) {
+        if (file.startsWith('chart_') && file.endsWith('.png')) {
+          await fs.unlink(path.join(wallDir, file));
+        }
+      }
+      
+      await fs.writeFile(path.join(wallDir, latestPngName), buffer);
     } catch (e) {
       console.error('telemetry-collector: PNG rendering failed', e);
     }
@@ -152,6 +168,9 @@ export async function runTelemetry(api) {
     todayStr,
     spikes: state.spikes[todayStr] || [],
     now
+  }, {
+    // Variety often needs the direct filename in the URL to believe it's an image
+    chartUrlBase: `http://localhost:18789/api/telemetry/${latestPngName}`
   });
   await fs.writeFile(rssPath, rss);
 
@@ -180,7 +199,8 @@ export async function handleTelemetryHttpRequest(req, res) {
         res.statusCode = 404; res.end('SVG not found'); return true;
       }
     }
-    if (req.url.includes('/api/telemetry/chart.png')) {
+    // Match any PNG request in the telemetry namespace
+    if (req.url.match(/\/api\/telemetry\/.*\.png/)) {
       try {
         const content = await fs.readFile(path.join(OPENCLAW_DIR, 'usage_telemetry.png'));
         res.statusCode = 200;
