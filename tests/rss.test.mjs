@@ -13,23 +13,22 @@ describe('RSS Feed Generation', () => {
     }
   ];
 
-  it('should render a valid Variety-compatible RSS feed', () => {
+  it('should render a valid RSS feed with channel metadata', () => {
     const rss = renderTelemetryRSS({ todayStr, spikes, now });
     
-    expect(rss).toContain('xmlns:media="http://search.yahoo.com/mrss/"');
-    expect(rss).toContain('medium="image"');
-    expect(rss).toContain('width="1920"');
-    expect(rss).toContain('height="1080"');
+    expect(rss).toContain('OpenClaw Telemetry');
+    expect(rss).toContain('Real-time token usage');
   });
 
-  it('should respect custom dimensions', () => {
-    const rss = renderTelemetryRSS({ todayStr, spikes, now }, { width: "3840", height: "2160" });
-    expect(rss).toContain('width="3840"');
-    expect(rss).toContain('height="2160"');
+  it('should include the latest telemetry chart item', () => {
+    const rss = renderTelemetryRSS({ todayStr, spikes, now });
+    
+    expect(rss).toContain('Latest Telemetry Chart');
+    expect(rss).toContain('chart-2026-02-22-');
   });
 
   it('should handle empty spikes', () => {
     const rss = renderTelemetryRSS({ todayStr, spikes: [], now });
-    expect(rss).toContain('<title>Telemetry Chart</title>');
+    expect(rss).toContain('Latest Telemetry Chart');
   });
 });

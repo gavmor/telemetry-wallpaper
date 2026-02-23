@@ -1,34 +1,61 @@
+import RSS from 'rss';
+
 /**
- * RSS Feed Generator for Telemetry (Variety-optimized).
+ * RSS Feed Generator for Telemetry using the 'rss' library.
  */
 export function renderTelemetryRSS({ todayStr, spikes, now = new Date() }, options = {}) {
-  const filename = options.filename || 'usage_telemetry.png';
-  const baseUrl = options.chartUrlBase || `http://127.0.0.1:18789/api/telemetry/${filename}`;
+  const chartUrlBase = options.chartUrlBase || 'http://localhost:18789/api/telemetry/chart.svg';
+  const chartUrl = `${chartUrlBase}?t=${now.getTime()}`;
   const width = options.width || "1920";
   const height = options.height || "1080";
   
-  const rssItems = (spikes || []).slice(-10).reverse().map(s => `
-    <item>
-      <title>Spike: ${s.tokens.toLocaleString()}</title>
-      <link>${baseUrl}</link>
-      <media:content url="${baseUrl}" medium="image" type="image/png" width="${width}" height="${height}" />
-      <guid isPermaLink="false">${s.timestamp}-${s.tokens}</guid>
-      <pubDate>${new Date(s.timestamp).toUTCString()}</pubDate>
-    </item>`).join('');
+  const feed = new RSS({
+    title: "OpenClaw Telemetry",
+    description: "Real-time token usage and spikes",
+    feed_url: "http://localhost:18789/api/telemetry/feed.xml",
+    site_url: "http://localhost:18789",
+    language: "en",
+    pubDate: now,
+    custom_namespaces: {
+      'media': 'http://search.yahoo.com/mrss/'
+    }
+  });
 
-  return `<?xml version="1.0" encoding="UTF-8" ?>
-<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
-<channel>
-  <title>OpenClaw Telemetry</title>
-  <link>http://127.0.0.1:18789</link>
-  <description>Real-time token usage</description>
-  <item>
-    <title>Telemetry Chart</title>
-    <link>${baseUrl}</link>
-    <media:content url="${baseUrl}" medium="image" type="image/png" width="${width}" height="${height}" />
-    <guid isPermaLink="false">chart-${todayStr}-${Math.floor(now.getTime() / (15 * 60 * 1000))}</guid>
-    <pubDate>${now.toUTCString()}</pubDate>
-  </item>${rssItems}
-</channel>
-</rss>`;
+  const mediaContent = {
+    'media:content': {
+      _attr: {
+        url: chartUrl,
+        type: 'image/svg+xml',
+        medium: 'image',
+        width,
+        height
+      }
+    }
+  };
+
+  // 1. Add the Chart Item
+  feed.item({
+    title: "Latest Telemetry Chart",
+    description: "The current usage visualization SVG",
+    url: chartUrl,
+    date: now,
+    guid: `chart-${todayStr}-${Math.floor(now.getTime() / (15 * 60 * 1000))}`,
+    custom_elements: [mediaContent]
+  });
+
+  // 2. Add Spike Items
+  const recentSpikes = (spikes || []).slice(-10).reverse();
+  
+  recentSpikes.forEach(s => {
+    feed.item({
+      title: `Usage Spike: ${s.tokens.toLocaleString()} tokens`,
+      description: `Model: ${s.model} | Channel: ${s.channel}`,
+      url: chartUrl,
+      date: new Date(s.timestamp),
+      guid: `${s.timestamp}-${s.tokens}`,
+      custom_elements: [mediaContent]
+    });
+  });
+
+  return feed.xml({ indent: true });
 }

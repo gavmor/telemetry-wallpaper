@@ -1,7 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { renderUsageSVG } from './renderer.mjs';
 import { renderTelemetryRSS } from './rss.mjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Data Collector & Orchestrator.
@@ -15,18 +18,24 @@ export async function runTelemetry(api) {
     loadImage = canvas.loadImage;
     GlobalFonts = canvas.GlobalFonts;
 
-    // Register standard Linux fonts to avoid "tofu" (white rectangles)
-    const fontPaths = [
-      '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
-      '/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf',
-      '/usr/share/fonts/truetype/noto/NotoSansMono-Regular.ttf'
-    ];
-    for (const f of fontPaths) {
-      try {
-        await fs.access(f);
-        GlobalFonts.registerFromPath(f, 'monospace');
-        break;
-      } catch (e) {}
+    // Register bundled font for portability
+    const bundledFont = path.join(__dirname, '../assets/JetBrainsMono.ttf');
+    try {
+      await fs.access(bundledFont);
+      GlobalFonts.registerFromPath(bundledFont, 'monospace');
+    } catch (e) {
+      console.warn('telemetry-collector: Bundled font not found, falling back to system fonts');
+      const fontPaths = [
+        '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf'
+      ];
+      for (const f of fontPaths) {
+        try {
+          await fs.access(f);
+          GlobalFonts.registerFromPath(f, 'monospace');
+          break;
+        } catch (e) {}
+      }
     }
   } catch (e) {
     console.warn('telemetry-collector: @napi-rs/canvas not found, PNG rendering disabled');
