@@ -40,8 +40,6 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^0.1.94",
-    "feed": "^5.2.0",
-    "rss": "^1.2.2"
+    "@napi-rs/canvas": "^0.1.94"
   }
 }

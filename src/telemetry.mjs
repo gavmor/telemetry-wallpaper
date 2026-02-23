@@ -52,7 +52,8 @@ export async function runTelemetry(api, options = {}) {
 
   // 4. Content Generation
   const now = new Date();
-  const dStr = now.toISOString().split('T')[0];
+  const pad = (n) => String(n).padStart(2, '0');
+  const dStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   const chartData = { date: dStr, stats: state.daily_stats[dStr] || {}, spikes: state.spikes[dStr] || [] };
   
   const svg = renderUsageSVG(chartData, { resolution: cfg.resolution, theme: cfg.theme, debug: options.debug });
