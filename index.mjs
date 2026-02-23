@@ -1,62 +1,31 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { runTelemetry } from './src/telemetry.mjs';
 
-const execAsync = promisify(exec);
-
+/**
+ * Extension entry point.
+ * Migrated to pure ESM JavaScript.
+ */
 export default function register(api) {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-
-  const getStateDir = () => {
-    if (typeof api.runtime?.state?.resolveStateDir === 'function') {
-      return api.runtime.state.resolveStateDir();
-    }
-    return path.join(process.env.HOME || '/home/user', '.openclaw');
-  };
-
-  const runUpdate = async (source) => {
+  const handleUpdate = async (source) => {
     try {
-      const updateScript = path.join(__dirname, 'src', 'update_wallpaper.sh');
-      const stateDir = getStateDir();
-
-      console.log(`telemetry-wallpaper: triggering update from ${source}`);
-
-      const env = {
-        ...process.env,
-        OPENCLAW_STATE_DIR: stateDir,
-        OPENCLAW_SESSIONS_DIR: path.join(stateDir, 'agents/main/sessions'),
-        TELEMETRY_SPIKE_THRESHOLD: String(api.pluginConfig?.spikeThreshold || 50000),
-        TELEMETRY_THEME: api.pluginConfig?.theme || 'gruvbox-dark',
-        TELEMETRY_RESOLUTION: api.pluginConfig?.resolution || '1920x1080'
-      };
-
-      await execAsync(`/usr/bin/bash "${updateScript}"`, { env });
-      console.log('telemetry-wallpaper: background updated successfully');
+      console.log(`telemetry-wallpaper: update triggered by ${source}`);
+      await runTelemetry(api);
+      console.log(`telemetry-wallpaper: update successful (${source})`);
     } catch (err) {
-      console.error(`telemetry-wallpaper: update failed: ${err.message}`);
+      console.error(`telemetry-wallpaper: update failed [${source}]: ${err.message}`);
     }
   };
 
-  // Try multiple known event names
-  const events = [
-    'gateway:startup',
-    'agent:turn:end',
-    'message_received',
-    'message_sent',
-    'command:new'
-  ];
+  try {
+    // Standard event listeners
+    api.on('gateway:startup', () => handleUpdate('gateway:startup'));
+    api.on('message_sent', () => handleUpdate('message_sent'));
+    api.on('message_received', () => handleUpdate('message_received'));
 
-  for (const event of events) {
-    api.on(event, async () => {
-      console.log(`telemetry-wallpaper: event received: ${event}`);
-      await runUpdate(event);
-    });
+    // Initial trigger
+    setTimeout(() => handleUpdate('registration'), 2000);
+
+    console.log('telemetry-wallpaper: extension registered and armed');
+  } catch (err) {
+    console.error('telemetry-wallpaper: registration failed', err);
   }
-
-  // Final manual trigger for registration confirmation
-  runUpdate('registration');
-
-  console.log('telemetry-wallpaper: extension fully armed with multiple event listeners');
 }
