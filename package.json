@@ -1,6 +1,6 @@
 {
   "name": "@gavmor/telemetry-wallpaper",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Real-time token usage telemetry as a Cinnamon desktop background.",
   "publishConfig": {
     "@gavmor:registry": "https://npm.pkg.github.com"
