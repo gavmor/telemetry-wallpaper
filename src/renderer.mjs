@@ -131,6 +131,17 @@ export function renderUsageSVG(data, options = {}) {
   let svg = `<svg width="${resW}" height="${resH}" xmlns="http://www.w3.org/2000/svg">`;
   svg += `<rect width="100%" height="100%" fill="${BG}" />`;
   
+  // Calculate Totals for Title
+  let totalActive = 0;
+  let totalCache = 0;
+  Object.values(stats).forEach(interval => {
+    Object.values(interval).forEach(m => {
+      totalActive += (m.active || 0);
+      totalCache += (m.cache || 0);
+    });
+  });
+  const totalTokens = totalActive + totalCache;
+
   // Debug Proofing Mark (Large and obvious to prove refresh)
   if (options.debug) {
     const now = new Date();
@@ -146,9 +157,12 @@ export function renderUsageSVG(data, options = {}) {
   // Format title without UTC slipping (YYYY-MM-DD -> Local readable)
   const [y, m, d] = date.split('-').map(Number);
   const titleDate = new Date(y, m - 1, d);
-  const title = `${customTitle}: ${titleDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}`;
+  const dateStr = titleDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+  const title = `${customTitle}: ${dateStr}`;
+  const subtitle = `Total: ${totalTokens.toLocaleString()} | Active: ${totalActive.toLocaleString()} | Cached: ${totalCache.toLocaleString()}`;
   
-  svg += `<text x="${marginL + chartW/2}" y="60" font-family="${FONT}" font-size="32" font-weight="bold" text-anchor="middle" fill="${FG}">${title}</text>`;
+  svg += `<text x="${marginL + chartW/2}" y="50" font-family="${FONT}" font-size="32" font-weight="bold" text-anchor="middle" fill="${FG}">${title}</text>`;
+  svg += `<text x="${marginL + chartW/2}" y="85" font-family="${FONT}" font-size="18" font-weight="normal" text-anchor="middle" fill="${GRAY}">${subtitle}</text>`;
 
   // Y-Axis
   [0, adjMax / 2, adjMax].forEach(tick => {
