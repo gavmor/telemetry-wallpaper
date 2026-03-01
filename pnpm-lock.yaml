@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@marko19907/string-to-color':
+        specifier: ^1.0.2
+        version: 1.0.2
       '@napi-rs/canvas':
         specifier: ^0.1.94
         version: 0.1.94
@@ -185,6 +188,9 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
+
+  '@marko19907/string-to-color@1.0.2':
+    resolution: {integrity: sha512-kADXIfypDWoCnqvqAjvgTm7curpHoigUpPVXKQY5fP2hUFfX72xx5H7ga4T7CwdBmIbYrbvU4zU/Al2NWPD+qQ==}
 
   '@napi-rs/canvas-android-arm64@0.1.94':
     resolution: {integrity: sha512-YQ6K83RWNMQOtgpk1aIML97QTE3zxPmVCHTi5eA8Nss4+B9JZi5J7LHQr7B5oD7VwSfWd++xsPdUiJ1+frqsMg==}
@@ -459,6 +465,9 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  esm-seedrandom@3.0.5-esm.2:
+    resolution: {integrity: sha512-K6/g/blFdwYWCvBJwbYQGDTlvP3ElnsXwIvbwLjwcP7grVtcqCC6VOPe47/z3gSfwCLkcWGeB8CffwMNYr35HQ==}
+
   estree-walker@3.0.3:
     resolution: {integrity: sha512-7RUKfXgSMMkzt6ZuXmqapOurLGPPfgj6l9uRZ7lRGolvk0y2yocc35LdcxKC5PQZdn2DMqioAQ2NoWcrTKmm6g==}
 
@@ -721,6 +730,10 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
+  '@marko19907/string-to-color@1.0.2':
+    dependencies:
+      esm-seedrandom: 3.0.5-esm.2
+
   '@napi-rs/canvas-android-arm64@0.1.94':
     optional: true
 
@@ -931,6 +944,8 @@ snapshots:
       '@esbuild/win32-arm64': 0.27.3
       '@esbuild/win32-ia32': 0.27.3
       '@esbuild/win32-x64': 0.27.3
+
+  esm-seedrandom@3.0.5-esm.2: {}
 
   estree-walker@3.0.3:
     dependencies:

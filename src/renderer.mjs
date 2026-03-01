@@ -1,3 +1,5 @@
+import { generateColor } from '@marko19907/string-to-color';
+
 /**
  * Pure functional SVG renderer for telemetry data.
  * Consumes structured usage data and returns an SVG string.
@@ -36,36 +38,27 @@ export function renderUsageSVG(data, options = {}) {
   const seriesData = [];
 
   const BG = "#282828"; const FG = "#ebdbb2"; const GRAY = "#928374"; const GRID = "#3c3836";
-  const PALETTE = [
-    { active: "#fb4934", cache: "#cc241d" }, // Red
-    { active: "#b8bb26", cache: "#98971a" }, // Green
-    { active: "#fabd2f", cache: "#d79921" }, // Yellow
-    { active: "#83a598", cache: "#458588" }, // Blue
-    { active: "#d3869b", cache: "#b16286" }, // Purple
-    { active: "#8ec07c", cache: "#689d6a" }, // Aqua
-    { active: "#fe8019", cache: "#d65d0e" }, // Orange
-  ];
 
-  const getModelColor = (fullId, index) => {
-    const id = fullId.toLowerCase();
-    if (id.includes('anthropic')) return PALETTE[3]; // Blue
-    if (id.includes('openai'))    return PALETTE[1]; // Green
-    if (id.includes('google') || id.includes('gemini')) return PALETTE[2]; // Yellow
-    if (id.includes('ollama'))    return PALETTE[4]; // Purple
-    if (id.includes('mistral'))   return PALETTE[5]; // Aqua
-    
-    // Fallback: Use hash of ID to pick from palette
-    let hash = 0;
-    for (let i = 0; i < fullId.length; i++) {
-      hash = ((hash << 5) - hash) + fullId.charCodeAt(i);
-      hash |= 0;
-    }
-    return PALETTE[Math.abs(hash) % PALETTE.length];
+  const darkenColor = (hex, percent) => {
+    const num = parseInt(hex.replace("#",""), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) - amt;
+    const G = (num >> 8 & 0x00FF) - amt;
+    const B = (num & 0x0000FF) - amt;
+    return "#" + (0x1000000 + (R < 255 ? R < 0 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 0 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 0 ? 0 : B : 255)).toString(16).slice(1);
+  };
+
+  const getModelColor = (fullId) => {
+    const active = generateColor(fullId);
+    return {
+      active,
+      cache: darkenColor(active, 30)
+    };
   };
 
   for (let i = 0; i < sortedModels.length; i++) {
     const fullId = sortedModels[i];
-    const colors = getModelColor(fullId, i);
+    const colors = getModelColor(fullId);
     const hasCache = fixedIntervals.some(inv => (stats[inv]?.[fullId]?.cache || 0) > 0);
     
     if (hasCache) {

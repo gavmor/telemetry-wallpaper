@@ -40,6 +40,7 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
+    "@marko19907/string-to-color": "^1.0.2",
     "@napi-rs/canvas": "^0.1.94",
     "rss": "^1.2.2"
   }
