@@ -37,6 +37,17 @@ export function renderUsageSVG(data, options = {}) {
 
   const BG = "#282828"; const FG = "#ebdbb2"; const GRAY = "#928374"; const GRID = "#3c3836";
 
+  const hslToHex = (h, s, l) => {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = n => {
+      const k = (n + h / 30) % 12;
+      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  };
+
   const getModelColor = (fullId) => {
     // Deterministic hash of the string
     let hash = 0;
@@ -47,11 +58,11 @@ export function renderUsageSVG(data, options = {}) {
     // Spread hue across 360 degrees
     const hue = Math.abs(hash % 360);
     
-    // Active: Vibrant HSL
-    // Cache: Darker, desaturated version
+    // Active: Vibrant HSL -> HEX
+    // Cache: Darker, desaturated version -> HEX
     return {
-      active: `hsl(${hue}, 70%, 60%)`,
-      cache: `hsl(${hue}, 40%, 35%)`
+      active: hslToHex(hue, 70, 60),
+      cache: hslToHex(hue, 40, 35)
     };
   };
 
