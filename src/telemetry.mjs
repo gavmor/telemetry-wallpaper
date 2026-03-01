@@ -84,6 +84,7 @@ export async function runTelemetry(api, options = {}) {
 
   if (options.debug) {
     if (options.format === 'rss') return rss;
+    if (options.format === 'svg') return svg;
     return latestPngNameOrBuffer;
   }
 

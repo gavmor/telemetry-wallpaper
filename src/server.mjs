@@ -24,10 +24,13 @@ export async function handleTelemetryHttpRequest(req, res, api) {
 
   try {
     const content = isDebug 
-      ? await runTelemetry(api, { debug: true, format: pathName.endsWith('.xml') ? 'rss' : 'png' }) 
+      ? await runTelemetry(api, { 
+          debug: true, 
+          format: pathName.endsWith('.xml') ? 'rss' : (pathName.endsWith('.svg') ? 'svg' : 'png') 
+        }) 
       : await fs.readFile(path.join(OPENCLAW_DIR, route.file));
 
-    res.writeHead(200, { 'Content-Type': route?.type || 'image/png', 'Cache-Control': 'no-cache' });
+    res.writeHead(200, { 'Content-Type': route?.type || (pathName.endsWith('.svg') ? 'image/svg+xml' : 'image/png'), 'Cache-Control': 'no-cache' });
     res.end(content);
   } catch (e) {
     res.statusCode = 404;
