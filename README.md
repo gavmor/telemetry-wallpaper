@@ -6,10 +6,11 @@ A real-time token usage telemetry collector and SVG renderer for **OpenClaw**.
 
 - **Real-time Tracking:** Collects token usage metrics (Active vs Cache) across all model providers.
 - **Granular Data:** Processes session logs with 15-minute interval precision.
-- **Semantic Spikes:** Automatically identifies usage spikes (>50k tokens) and attributes them to the specific channel/user.
-- **Beautiful Visualization:** Generates a 1080p SVG chart with a **Gruvbox Dark** theme.
-- **Remote Delivery:** Exposes an HTTP endpoint and an **RSS Feed** for cross-device wallpaper syncing.
-- **Unixy Architecture:** A pure data generator that emits events and lets you pipe the output anywhere.
+- **Radical Differentiation:** Uses provider-specific HSL color regions (e.g., Anthropic=Blue, Google=Gold, OpenAI=Green) to make different providers instantly recognizable.
+- **Daily Stats:** Displays real-time totals for **Total**, **Active**, and **Cached** tokens directly in the chart title.
+- **Semantic Spikes:** Automatically identifies usage spikes and attributes them to the specific channel/user.
+- **Beautiful Visualization:** Generates a 1080p chart with a **Gruvbox Dark** theme.
+- **Remote Delivery:** Exposes an HTTP endpoint and a streamlined **RSS Feed** optimized for cross-device wallpaper syncing.
 
 ## 🛠 Installation
 
@@ -51,7 +52,7 @@ openclaw config get gateway.auth.token
 
 ### Forcing Updates (Debug Mode)
 
-To bypass the cache and force a fresh telemetry run, append `&debug=true` to any URL:
+To bypass the cache and force a fresh telemetry run (ideal for verifying style or layout changes), append `&debug=true` to any URL:
 `http://127.0.0.1:18789/api/telemetry/feed.xml?token=YOUR_TOKEN&debug=true`
 
 ## 🖥 Desktop Integration
@@ -88,7 +89,7 @@ osascript -e "tell application \"System Events\" to set picture of every desktop
 
 ### No-Code (Standard RSS Tools)
 
-Point any generic RSS-to-Wallpaper app to the `/api/telemetry/feed.xml?token=YOUR_TOKEN` endpoint. The feed automatically includes the token in all internal media links so images will load correctly.
+Point any generic RSS-to-Wallpaper app to the `/api/telemetry/feed.xml?token=YOUR_TOKEN` endpoint. The feed automatically includes the token in all internal media links so images will load correctly and bypasses stale caches when testing.
 
 ## 📜 License
 
