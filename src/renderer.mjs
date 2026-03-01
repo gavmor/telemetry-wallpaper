@@ -118,7 +118,7 @@ export function renderUsageSVG(data, options = {}) {
   // 5. Scaling Logic
   const maxVal = (stacks.length > 0) ? Math.max(...stacks[stacks.length - 1], 1000) : 1000;
   const [resW, resH] = resolution.split('x').map(Number);
-  const marginL = 120; const marginR = 150; const marginT = 100; const marginB = 150;
+  const marginL = 120; const marginR = 450; const marginT = 160; const marginB = 150;
   const chartW = resW - marginL - marginR; const chartH = resH - marginT - marginB;
 
   const adjMax = Math.ceil(maxVal / 100000) * 100000 || 100000;
@@ -161,8 +161,8 @@ export function renderUsageSVG(data, options = {}) {
   const title = `${customTitle}: ${dateStr}`;
   const subtitle = `Total: ${totalTokens.toLocaleString()} | Active: ${totalActive.toLocaleString()} | Cached: ${totalCache.toLocaleString()}`;
   
-  svg += `<text x="${marginL + chartW/2}" y="50" font-family="${FONT}" font-size="32" font-weight="bold" text-anchor="middle" fill="${FG}">${title}</text>`;
-  svg += `<text x="${marginL + chartW/2}" y="85" font-family="${FONT}" font-size="18" font-weight="normal" text-anchor="middle" fill="${GRAY}">${subtitle}</text>`;
+  svg += `<text x="${marginL + chartW/2}" y="60" font-family="${FONT}" font-size="36" font-weight="bold" text-anchor="middle" fill="${FG}">${title}</text>`;
+  svg += `<text x="${marginL + chartW/2}" y="105" font-family="${FONT}" font-size="22" font-weight="normal" text-anchor="middle" fill="${GRAY}">${subtitle}</text>`;
 
   // Y-Axis
   [0, adjMax / 2, adjMax].forEach(tick => {
@@ -187,10 +187,10 @@ export function renderUsageSVG(data, options = {}) {
 
   // Legend
   seriesLabels.forEach((lab, i) => {
-    const yP = marginT + i * 20;
+    const yP = marginT + i * 22;
     const op = lab.includes('Cache') ? "0.3" : "0.8";
-    svg += `<rect x="${resW - 300}" y="${yP}" width="10" height="10" fill="${seriesColors[i]}" opacity="${op}" />`;
-    svg += `<text x="${resW - 285}" y="${yP + 10}" font-family="${FONT}" font-size="12" fill="${FG}">${lab}</text>`;
+    svg += `<rect x="${resW - marginR + 20}" y="${yP}" width="12" height="12" fill="${seriesColors[i]}" opacity="${op}" />`;
+    svg += `<text x="${resW - marginR + 40}" y="${yP + 11}" font-family="${FONT}" font-size="13" fill="${FG}">${lab}</text>`;
   });
 
   // Spikes
