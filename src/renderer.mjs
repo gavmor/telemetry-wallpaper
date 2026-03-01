@@ -49,20 +49,42 @@ export function renderUsageSVG(data, options = {}) {
   };
 
   const getModelColor = (fullId) => {
-    // Deterministic hash of the string
-    let hash = 0;
-    for (let i = 0; i < fullId.length; i++) {
-      hash = fullId.charCodeAt(i) + ((hash << 5) - hash);
+    const [provider, ...rest] = fullId.split('/');
+    const modelName = rest.join('/');
+
+    // 1. Assign a base hue per provider (radically different regions)
+    const PROVIDER_HUES = {
+      'anthropic': 220, // Blue
+      'google': 45,     // Yellow/Gold
+      'openai': 150,    // Green
+      'ollama': 280,    // Purple
+      'mistral': 190,   // Aqua
+      'ch-dot-at': 10   // Red/Orange
+    };
+
+    let baseHue;
+    if (PROVIDER_HUES[provider.toLowerCase()]) {
+      baseHue = PROVIDER_HUES[provider.toLowerCase()];
+    } else {
+      // Hash provider name for unknown providers
+      let pHash = 0;
+      for (let i = 0; i < provider.length; i++) {
+        pHash = provider.charCodeAt(i) + ((pHash << 5) - pHash);
+      }
+      baseHue = Math.abs(pHash % 360);
     }
 
-    // Spread hue across 360 degrees
-    const hue = Math.abs(hash % 360);
+    // 2. Differentiate models within the provider's region (+/- 20 degrees)
+    let mHash = 0;
+    for (let i = 0; i < modelName.length; i++) {
+      mHash = modelName.charCodeAt(i) + ((mHash << 5) - mHash);
+    }
+    const offset = (mHash % 40) - 20; 
+    const finalHue = (baseHue + offset + 360) % 360;
     
-    // Active: Vibrant HSL -> HEX
-    // Cache: Darker, desaturated version -> HEX
     return {
-      active: hslToHex(hue, 70, 60),
-      cache: hslToHex(hue, 40, 35)
+      active: hslToHex(finalHue, 75, 60),
+      cache: hslToHex(finalHue, 45, 35)
     };
   };
 
