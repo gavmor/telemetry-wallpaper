@@ -74,7 +74,7 @@ export async function runTelemetry(api, options = {}) {
     } catch (e) {}
   }
   const rss = renderTelemetryRSS(
-    { todayStr: dStr, spikes: state.spikes[dStr] || [], now },
+    { todayStr: dStr, now },
     { 
       filename: (typeof latestPngNameOrBuffer === 'string' ? latestPngNameOrBuffer : 'usage_telemetry.png'), 
       width: (cfg.resolution || '1920x1080').split('x')[0],

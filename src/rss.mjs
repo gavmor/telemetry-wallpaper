@@ -4,7 +4,7 @@ import RSS from 'rss';
  * RSS Feed Generator for Telemetry using the 'rss' library.
  * High-level abstraction with robust attribute support for MediaRSS.
  */
-export function renderTelemetryRSS({ todayStr, spikes, now = new Date() }, options = {}) {
+export function renderTelemetryRSS({ todayStr, now = new Date() }, options = {}) {
   const filename = options.filename || 'usage_telemetry.png';
   const token = options.token ? `?token=${options.token}` : '';
   const chartUrl = options.chartUrlBase || `http://127.0.0.1:18789/api/telemetry/${filename}${token}`;
@@ -47,7 +47,7 @@ export function renderTelemetryRSS({ todayStr, spikes, now = new Date() }, optio
     }
   ];
 
-  // 1. Add the Main Chart Item
+  // Add the Main Chart Item
   feed.item({
     title: "Latest Telemetry Chart",
     description: "The current usage visualization PNG",
@@ -55,18 +55,6 @@ export function renderTelemetryRSS({ todayStr, spikes, now = new Date() }, optio
     date: now,
     guid: `chart-${todayStr}-${Math.floor(now.getTime() / (15 * 60 * 1000))}`,
     custom_elements: customElements
-  });
-
-  // 2. Add Spike Items
-  (spikes || []).slice(-10).reverse().forEach(s => {
-    feed.item({
-      title: `Usage Spike: ${s.tokens.toLocaleString()} tokens`,
-      description: `Model: ${s.model} | Channel: ${s.channel}`,
-      url: chartUrl,
-      date: new Date(s.timestamp),
-      guid: `${s.timestamp}-${s.tokens}`,
-      custom_elements: customElements
-    });
   });
 
   return feed.xml({ indent: true });
