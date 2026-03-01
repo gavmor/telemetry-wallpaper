@@ -23,8 +23,8 @@ export async function handleTelemetryHttpRequest(req, res, api) {
   if (!route && !isDebug) return false;
 
   try {
-    const content = (isDebug && pathName.includes('chart')) 
-      ? await runTelemetry(api, { debug: true }) 
+    const content = isDebug 
+      ? await runTelemetry(api, { debug: true, format: pathName.endsWith('.xml') ? 'rss' : 'png' }) 
       : await fs.readFile(path.join(OPENCLAW_DIR, route.file));
 
     res.writeHead(200, { 'Content-Type': route?.type || 'image/png', 'Cache-Control': 'no-cache' });

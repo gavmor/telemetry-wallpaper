@@ -17,12 +17,42 @@ A real-time token usage telemetry collector and SVG renderer for **OpenClaw**.
 openclaw plugins install https://github.com/gavmor/telemetry-wallpaper
 ```
 
+### Enable the Plugin
+
+Ensure the plugin is enabled in your `~/.openclaw/openclaw.json`:
+
+```json
+{
+  "plugins": {
+    "allow": ["telemetry-collector"],
+    "entries": {
+      "telemetry-collector": { "enabled": true }
+    }
+  }
+}
+```
+
 ## 📊 Endpoints
 
-The extension exposes the following endpoints via the OpenClaw Gateway (default port `18789`):
+The extension exposes the following endpoints via the OpenClaw Gateway (default port `18789`).
 
-- **SVG Chart:** `GET /api/telemetry/chart.svg` (The latest 1080p chart)
-- **RSS Feed:** `GET /api/telemetry/feed.xml` (Updates on new charts and usage spikes)
+### Authentication
+
+If your gateway is in `token` mode (default), you **must** append your gateway token to all requests:
+
+- **SVG Chart:** `GET /api/telemetry/chart.svg?token=YOUR_TOKEN`
+- **RSS Feed:** `GET /api/telemetry/feed.xml?token=YOUR_TOKEN`
+- **PNG Chart:** `GET /api/telemetry/chart.png?token=YOUR_TOKEN`
+
+To find your token, run:
+```bash
+openclaw config get gateway.auth.token
+```
+
+### Forcing Updates (Debug Mode)
+
+To bypass the cache and force a fresh telemetry run, append `&debug=true` to any URL:
+`http://127.0.0.1:18789/api/telemetry/feed.xml?token=YOUR_TOKEN&debug=true`
 
 ## 🖥 Desktop Integration
 
@@ -37,7 +67,8 @@ gsettings set org.cinnamon.desktop.background picture-uri "file://$HOME/.opencla
 1. Create a bridge script `~/bin/sync-telemetry.sh`:
 ```bash
 #!/bin/bash
-REMOTE_URL="http://macmini.local:18789/api/telemetry/chart.svg"
+TOKEN=$(openclaw config get gateway.auth.token)
+REMOTE_URL="http://macmini.local:18789/api/telemetry/chart.svg?token=$TOKEN"
 LOCAL_PATH="$HOME/Pictures/openclaw_telemetry.svg"
 curl -s -o "$LOCAL_PATH" "$REMOTE_URL"
 osascript -e "tell application \"System Events\" to set picture of every desktop to \"$LOCAL_PATH\""
@@ -57,7 +88,7 @@ osascript -e "tell application \"System Events\" to set picture of every desktop
 
 ### No-Code (Standard RSS Tools)
 
-You can point any generic RSS-to-Wallpaper app (like `DailyWallpaper` on macOS) to the `/api/telemetry/feed.xml` endpoint. This will automatically sync the chart and can even notify you of usage spikes.
+Point any generic RSS-to-Wallpaper app to the `/api/telemetry/feed.xml?token=YOUR_TOKEN` endpoint. The feed automatically includes the token in all internal media links so images will load correctly.
 
 ## 📜 License
 

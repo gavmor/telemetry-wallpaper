@@ -60,15 +60,34 @@ export async function runTelemetry(api, options = {}) {
   if (!options.debug) await fs.writeFile(paths.svg, svg);
 
   // 5. Artifact Rendering
-  const latestPngName = await renderPNG(svg, paths, { resolution: cfg.resolution, isDebug: options.debug });
-  if (options.debug && Buffer.isBuffer(latestPngName)) return latestPngName;
+  const latestPngNameOrBuffer = await renderPNG(svg, paths, { resolution: cfg.resolution, isDebug: options.debug });
+  
+  let gatewayToken = api.gateway?.token || 
+                       api.config?.gateway?.auth?.token || 
+                       api.pluginConfig?.gatewayToken ||
+                       (typeof api.getGatewayToken === 'function' ? api.getGatewayToken() : null);
 
+  if (!gatewayToken) {
+    try {
+      const mainConfig = JSON.parse(await fs.readFile(path.join(paths.root, 'openclaw.json'), 'utf8'));
+      gatewayToken = mainConfig.gateway?.auth?.token;
+    } catch (e) {}
+  }
   const rss = renderTelemetryRSS(
     { todayStr: dStr, spikes: state.spikes[dStr] || [], now },
-    { filename: latestPngName || 'usage_telemetry.png', width: (cfg.resolution || '1920x1080').split('x')[0] }
+    { 
+      filename: (typeof latestPngNameOrBuffer === 'string' ? latestPngNameOrBuffer : 'usage_telemetry.png'), 
+      width: (cfg.resolution || '1920x1080').split('x')[0],
+      token: gatewayToken
+    }
   );
-  await fs.writeFile(paths.rss, rss);
 
+  if (options.debug) {
+    if (options.format === 'rss') return rss;
+    return latestPngNameOrBuffer;
+  }
+
+  await fs.writeFile(paths.rss, rss);
   if (typeof api.emit === 'function') {
     api.emit('telemetry:updated', { path: paths.svg, rssPath: paths.rss });
   }

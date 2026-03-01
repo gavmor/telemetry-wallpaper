@@ -6,14 +6,15 @@ import RSS from 'rss';
  */
 export function renderTelemetryRSS({ todayStr, spikes, now = new Date() }, options = {}) {
   const filename = options.filename || 'usage_telemetry.png';
-  const chartUrl = options.chartUrlBase || `http://127.0.0.1:18789/api/telemetry/${filename}`;
+  const token = options.token ? `?token=${options.token}` : '';
+  const chartUrl = options.chartUrlBase || `http://127.0.0.1:18789/api/telemetry/${filename}${token}`;
   const width = options.width || "1920";
   const height = options.height || "1080";
   
   const feed = new RSS({
     title: "OpenClaw Telemetry",
     description: "Real-time token usage and spikes",
-    feed_url: "http://127.0.0.1:18789/api/telemetry/feed.xml",
+    feed_url: `http://127.0.0.1:18789/api/telemetry/feed.xml${token}`,
     site_url: "http://127.0.0.1:18789",
     language: "en",
     pubDate: now,
